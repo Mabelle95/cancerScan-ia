@@ -2,8 +2,10 @@ import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, type Facility, type Referral, type ReferralStatus, type Screening } from "../api";
 import { useAuth } from "../auth";
+import { Icon } from "../components/Icon";
 import {
-  Card, ErrorNotice, Explanations, Loading, PATHOLOGY_LABELS, REFERRAL_LABELS, RiskBadge, StatusBadge, formatDate, useAsync,
+  Card, ErrorNotice, Explanations, Loading, PATHOLOGY_LABELS, REFERRAL_LABELS, RISK_ICON, RISK_LABELS, RiskBadge, ScoreRing,
+  StatusBadge, formatDate, useAsync,
 } from "../components/ui";
 import { useForms } from "../components/useForms";
 import { displayValue, isAlert, isMissing } from "../formLogic";
@@ -50,7 +52,23 @@ export function ScreeningResult() {
       )}
 
       <div className="grid grid-2">
-        <Card title="Estimation du risque">
+        <div>
+          {/* Carte de résultat : même rendu que l'application mobile (dégradé du niveau + anneau de score) */}
+          <div className={`result-hero lvl-${a?.risk_level ?? "none"}`}>
+            <div className="level"><Icon name={RISK_ICON[a?.risk_level ?? "none"]} size={30} />{a ? RISK_LABELS[a.risk_level] : "Analyse en attente"}</div>
+            <div style={{ margin: "16px auto 4px", width: "fit-content" }}>
+              {a ? <ScoreRing score={a.score} /> : (
+                <div style={{ width: 156, height: 156, borderRadius: "50%", border: "12px solid rgba(255,255,255,0.35)", display: "grid", placeItems: "center" }}>
+                  <Icon name={s.status === "brouillon" ? "note" : "cloud"} size={52} />
+                </div>
+              )}
+            </div>
+            <div className="sub">
+              {a ? "Niveau déterminé par le score calibré du modèle" : s.status === "brouillon" ? "Dépistage non soumis" : "Le moteur IA n'a pas encore calculé de résultat"}
+            </div>
+            {a && <span className="hero-pill"><Icon name="brain" size={15} />Modèle {a.model_id} v{a.model_version}</span>}
+          </div>
+        <Card title="Estimation du risque" icon="insights">
           {s.status === "brouillon" && <p className="muted">Dépistage non soumis : complétez le formulaire pour obtenir une analyse.</p>}
           {s.status === "soumis" && (
             <div className="notice notice-warn">
@@ -61,10 +79,6 @@ export function ScreeningResult() {
           )}
           {a && (
             <>
-              <div className="row" style={{ marginBottom: 12 }}>
-                <RiskBadge level={a.risk_level} large />
-                <span className="muted">Score estimé : {(a.score * 100).toFixed(0)} %</span>
-              </div>
               {!a.model_validated && (
                 <div className="notice notice-warn"><strong>Modèle non validé cliniquement</strong>Résultat à usage de démonstration et de développement : il ne doit pas guider une décision médicale.</div>
               )}
@@ -82,8 +96,9 @@ export function ScreeningResult() {
             Un risque faible ne signifie jamais qu'un cancer est absent. Le diagnostic relève des professionnels de santé.
           </p>
         </Card>
+        </div>
 
-        <Card title="Orientation">
+        <Card title="Orientation" icon="route">
           {ref ? (
             <>
               <div className="row" style={{ marginBottom: 8 }}>
@@ -191,7 +206,7 @@ function StatusActions({ referral, onDone }: { referral: Referral; onDone: () =>
 
 function DataRecap({ screening, form }: { screening: Screening; form: NonNullable<ReturnType<ReturnType<typeof useForms>["byPathology"]>> }) {
   return (
-    <Card title="Données saisies">
+    <Card title="Données saisies" icon="list">
       <div className="grid grid-2">
         {form.sections.map((section) => {
           const fields = section.fields.filter((f) => !isMissing(screening.data[f.id]));

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
+import { Icon } from "../components/Icon";
 import {
   Card, ErrorNotice, Loading, PATHOLOGY_LABELS, REFERRAL_LABELS, RiskBadge, StatusBadge, formatDate, patientAge, useAsync,
 } from "../components/ui";
@@ -37,11 +38,11 @@ export function PatientDetail() {
             <span>{p.code}</span>·<span>{patientAge(p)}</span>·<span>{[p.locality, p.region].filter(Boolean).join(", ")}</span>
           </div>
         </div>
-        {can("screenings:write") && <Link className="btn btn-primary" to={`/patients/${id}/depistage`}>Nouveau dépistage</Link>}
+        {can("screenings:write") && <Link className="btn btn-hero" to={`/patients/${id}/depistage`}><Icon name="plus" />Nouveau dépistage</Link>}
       </div>
 
       <div className="grid grid-2">
-        <Card title="Informations">
+        <Card title="Informations" icon="person">
           <dl className="dl">
             <dt>Téléphone</dt><dd>{p.phone ?? "—"}</dd>
             <dt>Niveau d'éducation</dt><dd>{p.education_level ?? "—"}</dd>
@@ -51,7 +52,7 @@ export function PatientDetail() {
           </dl>
         </Card>
 
-        <Card title="Examens complémentaires" actions={can("exams:write") && (
+        <Card title="Examens complémentaires" icon="note" actions={can("exams:write") && (
           <button className="btn btn-sm" onClick={() => setShowExam(!showExam)}>{showExam ? "Fermer" : "Ajouter un résultat"}</button>
         )}>
           {showExam && <ExamForm patientId={id} screenings={screenings.data ?? []} onDone={() => { setShowExam(false); exams.reload(); }} />}
@@ -70,7 +71,7 @@ export function PatientDetail() {
         </Card>
       </div>
 
-      <Card title="Historique des dépistages">
+      <Card title="Historique des dépistages" icon="list">
         <ErrorNotice message={screenings.error} />
         {screenings.loading ? <Loading /> : screenings.data?.length ? (
           <div className="table-wrap">
@@ -82,7 +83,7 @@ export function PatientDetail() {
                     <td>{formatDate(s.submitted_at ?? s.created_at)}</td>
                     <td>{PATHOLOGY_LABELS[s.pathology]}{s.alerts.length > 0 && <span className="badge badge-alert" style={{ marginLeft: 6 }}>{s.alerts.length} alerte{s.alerts.length > 1 ? "s" : ""}</span>}</td>
                     <td><StatusBadge status={s.status} /></td>
-                    <td>{s.assessments[0] ? <RiskBadge level={s.assessments[0].risk_level} /> : <span className="muted">—</span>}</td>
+                    <td>{s.assessments[0] ? <RiskBadge level={s.assessments[0].risk_level} compact /> : <RiskBadge level={null} compact />}</td>
                     <td>{s.referral ? REFERRAL_LABELS[s.referral.status] : "—"}</td>
                   </tr>
                 ))}

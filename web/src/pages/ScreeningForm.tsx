@@ -89,7 +89,7 @@ export function ScreeningForm() {
           <p className="muted">Chaque pathologie a ses propres facteurs de risque et son propre formulaire.</p>
           <div className="grid grid-4" style={{ marginTop: 12 }}>
             {PATHOLOGY_ORDER.filter((p) => byPathology(p)).map((p) => (
-              <button key={p} className={`btn${p === "sein" ? " btn-primary" : ""}`} style={{ minHeight: 64 }} onClick={() => setPathology(p)}>
+              <button key={p} className={`btn${p === "sein" ? " btn-hero" : ""}`} style={{ minHeight: 72, fontSize: "1.02rem" }} onClick={() => setPathology(p)}>
                 {PATHOLOGY_LABELS[p]}{p === "sein" && " — prioritaire"}
               </button>
             ))}
@@ -122,7 +122,7 @@ export function ScreeningForm() {
         </span>
         <span className="spacer" />
         <button className="btn" disabled={busy} onClick={() => save(false)}>Enregistrer le brouillon</button>
-        <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>{busy ? "Analyse…" : "Soumettre pour analyse"}</button>
+        <button className="btn btn-hero" disabled={busy} onClick={() => save(true)}>{busy ? "Analyse…" : "Analyser"}</button>
       </div>
     </>
   );

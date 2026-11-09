@@ -51,7 +51,7 @@ export function Referrals() {
                   <tr key={r.id}>
                     <td><Link to={`/depistages/${r.screening_id}`}>{r.patient_code}</Link></td>
                     <td>{PATHOLOGY_LABELS[r.pathology]}</td>
-                    <td><RiskBadge level={r.proposed_level} /></td>
+                    <td><RiskBadge level={r.proposed_level} compact /></td>
                     <td>{r.final_decision ? REFERRAL_LABELS[r.status] : <span className="badge badge-warn">À valider</span>}</td>
                     <td>{formatDate(r.appointment_date)}</td>
                     <td>{formatDate(r.created_at)}</td>

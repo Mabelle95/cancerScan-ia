@@ -50,7 +50,7 @@ export interface FormField {
   ml?: boolean;
   help?: string;
 }
-export interface FormSection { id: string; title: string; fields: FormField[] }
+export interface FormSection { id: string; title: string; icon?: string; fields: FormField[] }
 export interface FormDef { pathology: Pathology; title: string; version: string; validated: boolean; sections: FormSection[] }
 
 export interface PatientSummary {

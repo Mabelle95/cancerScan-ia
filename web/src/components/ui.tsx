@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { Explanation, PatientSummary, RiskLevel, ScreeningStatus, ReferralStatus } from "../api";
+import { Icon } from "./Icon";
 
 export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
   const [data, setData] = useState<T | null>(null);
@@ -33,9 +34,21 @@ export const REFERRAL_LABELS: Record<ReferralStatus, string> = {
   proposee: "Proposée", programmee: "Programmée", realisee: "Réalisée", perdue_de_vue: "Perdue de vue", annulee: "Annulée",
 };
 
-export function RiskBadge({ level, large }: { level: RiskLevel | null | undefined; large?: boolean }) {
-  const cls = `risk risk-${level ?? "none"}${large ? " risk-lg" : ""}`;
-  return <span className={cls}>{level ? RISK_LABELS[level] : "Non calculé"}</span>;
+/** Mêmes libellés courts, icônes et couleurs que l'application mobile (riskStyle / shortRiskLabel). */
+export const SHORT_RISK: Record<RiskLevel, string> = { faible: "Faible", moyen: "Moyen", eleve: "Élevé" };
+export const RISK_ICON: Record<RiskLevel | "none", string> = { faible: "check", moyen: "warning", eleve: "priority", none: "hourglass" };
+export const RISK_COLOR: Record<RiskLevel | "none", string> = {
+  faible: "var(--risk-faible)", moyen: "var(--risk-moyen)", eleve: "var(--risk-eleve)", none: "var(--risk-none)",
+};
+
+export function RiskBadge({ level, large, compact }: { level: RiskLevel | null | undefined; large?: boolean; compact?: boolean }) {
+  const key = level ?? "none";
+  const label = level ? (compact ? SHORT_RISK[level] : RISK_LABELS[level]) : (compact ? "En attente" : "Analyse en attente");
+  return (
+    <span className={`risk risk-${key}${large ? " risk-lg" : ""}`}>
+      <Icon name={RISK_ICON[key]} size={large ? 18 : 15} />{label}
+    </span>
+  );
 }
 
 export function StatusBadge({ status }: { status: ScreeningStatus }) {
@@ -89,18 +102,78 @@ export function Bars({ data, labels, minCell, color }: { data: Record<string, nu
   );
 }
 
-export function Card({ title, actions, children }: { title?: ReactNode; actions?: ReactNode; children: ReactNode }) {
+/** Carte à ombre douce avec en-tête icône + titre (comme InfoCard du mobile). */
+export function Card({ title, actions, icon, iconColor, children }: { title?: ReactNode; actions?: ReactNode; icon?: string; iconColor?: string; children: ReactNode }) {
   return (
     <section className="card">
       {(title || actions) && (
-        <div className="row" style={{ marginBottom: 12 }}>
-          {title && <h2 style={{ margin: 0 }}>{title}</h2>}
+        <div className="card-title">
+          {icon && (
+            <span className="icon-badge" style={iconColor ? { color: iconColor, background: `color-mix(in srgb, ${iconColor} 13%, transparent)` } : undefined}>
+              <Icon name={icon} size={22} />
+            </span>
+          )}
+          {title && <h2>{title}</h2>}
           <span className="spacer" />
           {actions}
         </div>
       )}
       {children}
     </section>
+  );
+}
+
+/** Tuile chiffrée (même composant que StatTile du mobile). */
+export function StatTile({ value, label, icon, color }: { value: ReactNode; label: string; icon: string; color: string }) {
+  return (
+    <div className="card stat" style={{ marginBottom: 0 }}>
+      <span className="stat-icon" style={{ color, background: `color-mix(in srgb, ${color} 13%, transparent)` }}><Icon name={icon} size={20} /></span>
+      <span className="stat-value" style={{ color }}>{value}</span>
+      <span className="stat-label">{label}</span>
+    </div>
+  );
+}
+
+/** Anneau de score animé (même rendu que ScoreRing du mobile). */
+export function ScoreRing({ score, size = 156 }: { score: number; size?: number }) {
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setShown(Math.max(0, Math.min(1, score))));
+    return () => cancelAnimationFrame(t);
+  }, [score]);
+  const stroke = size * 0.085, r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`Score estimé ${Math.round(score * 100)} %`}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#fff" strokeWidth={stroke} strokeLinecap="round"
+        strokeDasharray={c} strokeDashoffset={c * (1 - shown)} transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: "stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1)" }} />
+      <text x="50%" y="48%" textAnchor="middle" fill="#fff" fontSize={size * 0.22} fontWeight={800}>{Math.round(score * 100)} %</text>
+      <text x="50%" y="64%" textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize={size * 0.08}>score estimé</text>
+    </svg>
+  );
+}
+
+/** Graphique en anneau (même rendu que DonutChart du mobile). */
+export function Donut({ segments, size = 150, center }: { segments: [number, string][]; size?: number; center?: ReactNode }) {
+  const stroke = size * 0.16, r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const total = segments.reduce((a, [v]) => a + v, 0);
+  let offset = 0;
+  return (
+    <div style={{ position: "relative", width: size, height: size, flex: "none" }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border)" strokeWidth={stroke} />
+        {total > 0 && segments.map(([v, color], i) => {
+          if (v <= 0) return null;
+          const len = (v / total) * c;
+          const el = <circle key={i} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+            strokeDasharray={`${Math.max(len - 3, 0)} ${c}`} strokeDashoffset={-offset} transform={`rotate(-90 ${size / 2} ${size / 2})`} />;
+          offset += len;
+          return el;
+        })}
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", textAlign: "center" }}>{center}</div>
+    </div>
   );
 }
 

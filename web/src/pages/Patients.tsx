@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
+import { Icon } from "../components/Icon";
 import { ErrorNotice, Loading, formatDate, patientAge, useAsync } from "../components/ui";
 
 export function Patients() {
@@ -25,11 +26,12 @@ export function Patients() {
           <h1>Patientes</h1>
           <p className="muted">Rechercher un dossier avant d'en créer un nouveau, pour éviter les doublons.</p>
         </div>
-        {can("patients:write") && <Link className="btn btn-primary" to="/patients/nouvelle">Nouvelle patiente</Link>}
+        {can("patients:write") && <Link className="btn btn-hero" to="/patients/nouvelle"><Icon name="plus" />Nouvelle patiente</Link>}
       </div>
-      <div className="card">
-        <input type="search" placeholder="Code (CS-…), téléphone ou nom" value={input} onChange={(e) => setInput(e.target.value)}
-          aria-label="Rechercher une patiente" autoFocus />
+      <div className="card input-icon" style={{ padding: 14 }}>
+        <Icon name="search" />
+        <input type="search" placeholder="Nom, code (CS-…) ou téléphone" value={input} onChange={(e) => setInput(e.target.value)}
+          aria-label="Rechercher une patiente" autoFocus style={{ paddingLeft: 46 }} />
       </div>
       <ErrorNotice message={error} />
       {loading ? <Loading /> : (

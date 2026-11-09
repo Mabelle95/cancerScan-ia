@@ -1,10 +1,29 @@
 import { useState } from "react";
 import { api } from "../api";
-import { Bars, Card, ErrorNotice, Loading, PATHOLOGY_LABELS, REFERRAL_LABELS, RISK_LABELS, TOGO_REGIONS, useAsync } from "../components/ui";
+import { Bars, Card, Donut, ErrorNotice, Loading, PATHOLOGY_LABELS, REFERRAL_LABELS, RISK_COLOR, SHORT_RISK, StatTile, TOGO_REGIONS, useAsync } from "../components/ui";
 
-const RISK_COLORS: Record<string, string> = {
-  faible: "var(--risk-faible)", moyen: "var(--risk-moyen)", eleve: "var(--risk-eleve)", en_attente: "var(--text-muted)",
-};
+/** Même graphique en anneau + légende que le tableau de bord mobile. Les effectifs masqués (< seuil) comptent pour 0. */
+function RiskDonut({ data, minCell }: { data: Record<string, number | null>; minCell: number }) {
+  const levels: [string, string, string][] = [
+    ["eleve", SHORT_RISK.eleve, RISK_COLOR.eleve], ["moyen", SHORT_RISK.moyen, RISK_COLOR.moyen],
+    ["faible", SHORT_RISK.faible, RISK_COLOR.faible], ["en_attente", "En attente", RISK_COLOR.none],
+  ];
+  const total = levels.reduce((a, [k]) => a + (data[k] ?? 0), 0);
+  return (
+    <div className="row" style={{ gap: 24, alignItems: "center", flexWrap: "nowrap" }}>
+      <Donut segments={levels.map(([k, , c]) => [data[k] ?? 0, c])}
+        center={<div><div style={{ fontSize: "1.7rem", fontWeight: 800 }}>{total}</div><div className="small muted">au total</div></div>} />
+      <div style={{ flex: 1 }}>
+        {levels.map(([k, label, color]) => (
+          <div key={k} className="row" style={{ justifyContent: "space-between", padding: "6px 0", flexWrap: "nowrap" }}>
+            <span className="row" style={{ flexWrap: "nowrap" }}><span style={{ width: 12, height: 12, borderRadius: 4, background: color }} />{label}</span>
+            <strong>{data[k] === null ? `< ${minCell}` : data[k] ?? 0}</strong>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function Stats() {
   const [filters, setFilters] = useState({ region: "", pathology: "", date_from: "", date_to: "" });
@@ -39,34 +58,29 @@ export function Stats() {
       <ErrorNotice message={error} />
       {loading || !data ? <Loading /> : (
         <>
-          <div className="grid grid-4" style={{ marginBottom: 16 }}>
-            {[
-              ["Patientes dépistées", data.totals.patientes],
-              ["Dépistages", data.totals.depistages],
-              ["Avec signes d'alerte", data.totals.avec_signes_alerte],
-              ["Patientes référées", data.totals.references],
-              ["Références réalisées", data.totals.taux_realisation === null ? "—" : `${Math.round(data.totals.taux_realisation * 100)} %`],
-              ["Délai médian dépistage → consultation", data.totals.delai_median_jours === null ? "—" : `${data.totals.delai_median_jours} j`],
-            ].map(([label, value]) => (
-              <div className="card stat" key={label as string} style={{ marginBottom: 0 }}>
-                <span className="stat-value">{value}</span><span className="stat-label">{label}</span>
-              </div>
-            ))}
+          <div className="grid grid-3" style={{ marginBottom: 18 }}>
+            <StatTile value={data.totals.patientes} label="Patientes dépistées" icon="people" color="var(--primary)" />
+            <StatTile value={data.totals.depistages} label="Dépistages" icon="note" color="var(--teal)" />
+            <StatTile value={data.totals.avec_signes_alerte} label="Avec signes d'alerte" icon="warning" color="var(--risk-eleve)" />
+            <StatTile value={data.totals.references} label="Patientes référées" icon="route" color="var(--violet)" />
+            <StatTile value={data.totals.taux_realisation === null ? "—" : `${Math.round(data.totals.taux_realisation * 100)} %`}
+              label="Références réalisées" icon="check" color="var(--risk-faible)" />
+            <StatTile value={data.totals.delai_median_jours === null ? "—" : `${data.totals.delai_median_jours} j`}
+              label="Délai médian dépistage → consultation" icon="hourglass" color="var(--risk-moyen)" />
           </div>
           <div className="grid grid-2">
-            <Card title="Répartition des risques estimés">
-              <Bars data={data.par_niveau_risque} minCell={data.min_cell_size}
-                labels={{ ...RISK_LABELS, en_attente: "Analyse en attente" }} color={(k) => RISK_COLORS[k]} />
+            <Card title="Répartition des risques estimés" icon="donut">
+              <RiskDonut data={data.par_niveau_risque} minCell={data.min_cell_size} />
             </Card>
-            <Card title="Par région"><Bars data={data.par_region} minCell={data.min_cell_size} /></Card>
-            <Card title="Par tranche d'âge"><Bars data={data.par_tranche_age} minCell={data.min_cell_size} /></Card>
-            <Card title="Par pathologie"><Bars data={data.par_pathologie} minCell={data.min_cell_size} labels={PATHOLOGY_LABELS} /></Card>
-            <Card title="Suivi des références"><Bars data={data.statut_references} minCell={data.min_cell_size} labels={REFERRAL_LABELS} /></Card>
-            <Card title="Cas confirmés par les examens de référence">
+            <Card title="Par région" icon="route"><Bars data={data.par_region} minCell={data.min_cell_size} /></Card>
+            <Card title="Par tranche d'âge" icon="people"><Bars data={data.par_tranche_age} minCell={data.min_cell_size} /></Card>
+            <Card title="Par pathologie" icon="medical"><Bars data={data.par_pathologie} minCell={data.min_cell_size} labels={PATHOLOGY_LABELS} /></Card>
+            <Card title="Suivi des références" icon="list"><Bars data={data.statut_references} minCell={data.min_cell_size} labels={REFERRAL_LABELS} /></Card>
+            <Card title="Cas confirmés par les examens de référence" icon="check" iconColor="var(--risk-eleve)">
               <Bars data={data.totals.cas_confirmes} minCell={data.min_cell_size} labels={{ malin: "Malin", precancereux: "Précancéreux" }} />
             </Card>
           </div>
-          <Card title="Évolution mensuelle des dépistages"><Bars data={data.evolution_mensuelle} minCell={data.min_cell_size} /></Card>
+          <Card title="Évolution mensuelle des dépistages" icon="chart" iconColor="var(--violet)"><Bars data={data.evolution_mensuelle} minCell={data.min_cell_size} /></Card>
         </>
       )}
     </>
