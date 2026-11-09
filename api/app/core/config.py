@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     # Les effectifs inférieurs à ce seuil sont masqués dans les statistiques agrégées
     stats_min_cell_size: int = 5
 
+    # Protection de la connexion : blocage du compte après N échecs consécutifs, limite par adresse IP
+    login_max_failures: int = 5
+    login_lock_minutes: int = 15
+    login_ip_max_failures: int = 20
+    login_ip_window_minutes: int = 15
+
     # Logs : JSON sur la console et dans un fichier tournant (vide = console uniquement)
     log_dir: Path | None = ROOT_DIR / "logs"
     log_level: str = "INFO"

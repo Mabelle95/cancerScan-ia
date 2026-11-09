@@ -29,6 +29,8 @@ PASSWORD = "Password123!"
 
 @pytest.fixture(autouse=True)
 def database():
+    from app.services import login_guard
+    login_guard.reset()  # compteur d'échecs par adresse IP : en mémoire, à remettre à zéro entre les tests
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     seed(demo=True)

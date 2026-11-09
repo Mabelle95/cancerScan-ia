@@ -123,6 +123,18 @@ l'établissement (et aux patientes référées pour le spécialiste) ; l'adminis
 médicaux ; statistiques masquées sous 5 effectifs ; journal des connexions, consultations, modifications,
 exécutions IA et changements de droits.
 
+## Sécurité de la connexion
+
+- **Blocage du compte** après 5 échecs consécutifs, pendant 15 minutes (`LOGIN_MAX_FAILURES`, `LOGIN_LOCK_MINUTES`).
+  Le bon mot de passe est refusé pendant le blocage ; l'administrateur peut débloquer (Web : *Utilisateurs*).
+- **Limite par adresse IP** : 20 échecs en 15 minutes, tous comptes confondus (`LOGIN_IP_MAX_FAILURES`). En mémoire et
+  par processus : derrière un proxy ou avec plusieurs processus, prévoir l'adresse réelle (X-Forwarded-For) et un
+  stockage partagé.
+- **Pas d'indice sur l'existence d'un compte** : même message et même temps de calcul (bcrypt) si le compte n'existe pas.
+- **Mots de passe** : 10 caractères minimum, lettres et chiffres, ni trop courant ni contenant l'identifiant.
+- **Changer de mot de passe déconnecte les autres sessions** : la version du mot de passe est inscrite dans le jeton.
+- Journalisé : `login_failed`, `account_locked`, `login_locked`, `login_throttled`, `account_unlocked`, `password_change`.
+
 ## Supervision : logs, erreurs, traçabilité
 
 | Besoin | Où | Contenu |

@@ -6,9 +6,9 @@ from fastapi import APIRouter, HTTPException, Query, Request, status
 from sqlalchemy import select
 
 from app.core.permissions import Perm
-from app.core.security import hash_password
+from app.core.security import hash_password, password_problem
 from app.deps import CurrentUser, DbSession, require
-from app.models import AuditLog, Facility, User
+from app.models import AuditLog, Facility, User, utcnow
 from app.schemas import AuditOut, FacilityIn, FacilityOut, UserCreate, UserOut, UserUpdate
 from app.services import engine_client
 from app.services.audit import audit
@@ -68,6 +68,9 @@ def create_user(body: UserCreate, db: DbSession, request: Request, admin=require
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(status.HTTP_409_CONFLICT, "Adresse e-mail déjà utilisée")
     _check_facility(db, body.facility_id)
+    problem = password_problem(body.password, email)
+    if problem:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, problem)
     user = User(email=email, full_name=body.full_name, role=body.role, facility_id=body.facility_id,
                 hashed_password=hash_password(body.password))
     db.add(user)
@@ -87,12 +90,27 @@ def update_user(user_id: int, body: UserUpdate, db: DbSession, request: Request,
         _check_facility(db, changes["facility_id"])
     password = changes.pop("password", None)
     if password:
+        problem = password_problem(password, user.email)
+        if problem:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, problem)
         user.hashed_password = hash_password(password)
+        user.password_changed_at = utcnow()  # les sessions ouvertes avec l'ancien mot de passe sont révoquées
+        user.locked_until, user.failed_login_count = None, 0
     for k, v in changes.items():
         setattr(user, k, v)
     # Les changements de droits sont journalisés explicitement (cahier des charges §11.3)
     action = "rights_change" if {"role", "is_active", "facility_id"} & changes.keys() else "update"
     audit(db, admin, action, "user", user.id, {k: str(v) for k, v in changes.items()} | ({"password": "reset"} if password else {}), request)
+    db.commit()
+    return user
+
+
+@router.post("/users/{user_id}/unlock", response_model=UserOut)
+def unlock_user(user_id: int, db: DbSession, request: Request, admin=require(Perm.USERS_MANAGE)):
+    """Débloque un compte bloqué après des échecs de connexion répétés."""
+    user = db.get(User, user_id) or _not_found("Utilisateur")
+    user.locked_until, user.failed_login_count = None, 0
+    audit(db, admin, "account_unlocked", "user", user.id, request=request)
     db.commit()
     return user
 

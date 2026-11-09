@@ -13,6 +13,12 @@ export function Users() {
   const [error, setError] = useState<string | null>(null);
   const facilityName = (id: number | null) => facilities.data?.find((f) => f.id === id)?.name ?? "—";
 
+  const isLocked = (u: User) => !!u.locked_until && new Date(u.locked_until) > new Date();
+  const unlock = async (u: User) => {
+    setError(null);
+    try { await api.unlockUser(u.id); users.reload(); } catch (e) { setError((e as Error).message); }
+  };
+
   const toggle = async (u: User) => {
     setError(null);
     try { await api.updateUser(u.id, { is_active: !u.is_active }); users.reload(); } catch (e) { setError((e as Error).message); }
@@ -37,8 +43,17 @@ export function Users() {
                   <td>{ROLE_LABELS[u.role]}</td>
                   <td>{facilityName(u.facility_id)}</td>
                   <td>{formatDate(u.last_login_at, true)}</td>
-                  <td>{u.is_active ? <span className="badge badge-ok">Actif</span> : <span className="badge">Désactivé</span>}</td>
-                  <td>{u.id !== me?.id && <button className="btn btn-sm" onClick={() => toggle(u)}>{u.is_active ? "Désactiver" : "Réactiver"}</button>}</td>
+                  <td>
+                    {isLocked(u)
+                      ? <span className="badge badge-alert" title={`Jusqu'à ${formatDate(u.locked_until, true)}`}>Bloqué (échecs de connexion)</span>
+                      : u.is_active ? <span className="badge badge-ok">Actif</span> : <span className="badge">Désactivé</span>}
+                  </td>
+                  <td>
+                    <div className="row">
+                      {isLocked(u) && <button className="btn btn-sm" onClick={() => unlock(u)}>Débloquer</button>}
+                      {u.id !== me?.id && <button className="btn btn-sm" onClick={() => toggle(u)}>{u.is_active ? "Désactiver" : "Réactiver"}</button>}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -86,7 +101,7 @@ function UserForm({ facilities, onDone }: { facilities: Facility[]; onDone: () =
         )}
         <label className="field"><span className="field-label">Mot de passe initial</span>
           <input type="password" required minLength={10} autoComplete="new-password" value={f.password} onChange={(e) => set("password", e.target.value)} />
-          <span className="field-help">10 caractères minimum, à changer à la première connexion.</span></label>
+          <span className="field-help">10 caractères minimum, avec des lettres et des chiffres, sans l'identifiant.</span></label>
       </div>
       <button className="btn btn-primary">Créer le compte</button>
     </form>
@@ -203,6 +218,9 @@ const ACTIONS: Record<string, string> = {
   login: "Connexion", login_failed: "Échec de connexion", read: "Consultation", search: "Recherche", create: "Création",
   update: "Modification", decide: "Décision d'orientation", status_change: "Suivi", ai_run: "Analyse IA",
   ai_deferred: "Analyse IA différée", rights_change: "Changement de droits", password_change: "Mot de passe",
+  password_change_failed: "Échec de changement de mot de passe", account_locked: "Compte bloqué",
+  account_unlocked: "Compte débloqué", login_locked: "Connexion refusée (compte bloqué)",
+  login_throttled: "Connexion refusée (trop de tentatives)",
 };
 
 export function Audit() {

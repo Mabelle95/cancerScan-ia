@@ -6,7 +6,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.permissions import Perm, has_permission
-from app.core.security import decode_access_token
+from app.core.security import decode_access_token, password_stamp
 from app.db import get_db
 from app.models import User
 
@@ -29,6 +29,9 @@ def get_current_user(
         raise unauthorized
     user = db.get(User, int(payload["sub"]))
     if user is None or not user.is_active:
+        raise unauthorized
+    if payload.get("pwd", 0) != password_stamp(user.password_changed_at):
+        # Jeton émis avant le dernier changement de mot de passe : session révoquée
         raise unauthorized
     request.state.user_id = user.id  # pour le journal d'accès et l'enregistrement des erreurs
     return user

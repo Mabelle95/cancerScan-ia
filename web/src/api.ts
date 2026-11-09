@@ -21,6 +21,8 @@ export interface User {
   mfa_enabled: boolean;
   created_at: string;
   last_login_at: string | null;
+  locked_until?: string | null;
+  failed_login_count?: number;
 }
 
 export interface Facility {
@@ -299,6 +301,7 @@ export const api = {
   users: () => request<User[]>("GET", "/users"),
   createUser: (body: Record<string, unknown>) => request<User>("POST", "/users", body),
   updateUser: (id: number, body: Record<string, unknown>) => request<User>("PATCH", `/users/${id}`, body),
+  unlockUser: (id: number) => request<User>("POST", `/users/${id}/unlock`),
 
   audit: (query: { action?: string; entity?: string; limit?: number }) => request<AuditEntry[]>("GET", "/audit", undefined, query),
   models: () => request<ModelInfo[]>("GET", "/models"),

@@ -17,6 +17,11 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def as_utc(dt: datetime | None) -> datetime | None:
+    """SQLite renvoie des dates sans fuseau : on les considère en UTC pour pouvoir les comparer."""
+    return dt if dt is None or dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
 def enum_column(enum_cls: type[StrEnum]) -> Enum:
     return Enum(enum_cls, native_enum=False, length=32, values_callable=lambda e: [m.value for m in e])
 
@@ -84,6 +89,11 @@ class User(Base):
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Protection contre les essais répétés de mots de passe
+    failed_login_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Les jetons émis avant cette date sont refusés (changement de mot de passe = déconnexion des autres sessions)
+    password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     facility: Mapped[Facility | None] = relationship()
 

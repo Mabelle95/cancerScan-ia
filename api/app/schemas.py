@@ -2,10 +2,10 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from app.core.permissions import Role
-from app.models import ExamType, Pathology, ReferralStatus, RiskLevel, ScreeningStatus
+from app.models import ExamType, Pathology, ReferralStatus, RiskLevel, ScreeningStatus, as_utc
 
 
 class ORM(BaseModel):
@@ -71,6 +71,13 @@ class UserOut(UserBase, ORM):
     mfa_enabled: bool
     created_at: datetime
     last_login_at: datetime | None
+    locked_until: datetime | None = None
+    failed_login_count: int = 0
+
+    @field_validator("created_at", "last_login_at", "locked_until")
+    @classmethod
+    def _utc(cls, v: datetime | None) -> datetime | None:
+        return as_utc(v)  # SQLite ne conserve pas le fuseau : les dates sont en UTC
 
 
 # --- Patientes ----------------------------------------------------------------
