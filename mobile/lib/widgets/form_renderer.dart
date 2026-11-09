@@ -6,17 +6,19 @@ import '../theme.dart';
 
 /// Champs d'une section du formulaire partagé (une étape de l'assistant).
 class SectionFields extends StatelessWidget {
-  const SectionFields({super.key, required this.section, required this.data, required this.onChanged, required this.errors});
+  const SectionFields({super.key, required this.section, required this.data, required this.onChanged, required this.errors, this.afterResult = false});
 
   final FormSectionDef section;
   final Map<String, Object?> data;
   final void Function(String id, Object? value) onChanged;
   final Map<String, String> errors;
+  /// false : questions de la saisie ; true : questions posées après le résultat de l'IA
+  final bool afterResult;
 
   @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      for (final f in section.fields.where((f) => isVisible(f, data)))
+      for (final f in section.fields.where((f) => f.afterResult == afterResult && isVisible(f, data)))
         _FieldInput(key: ValueKey(f.id), field: f, value: data[f.id], error: errors[f.id], onChanged: (v) => onChanged(f.id, v)),
     ]);
   }

@@ -32,9 +32,15 @@ class SyncService {
         'submit': s.payload['submit'] ?? true,
       };
 
+  Future<SyncReport>? _running;
+
   /// Lance une synchronisation. [OfflineException] si le serveur est injoignable,
   /// [ApiException] 401 si la session doit être renouvelée.
-  Future<SyncReport> run() async {
+  /// Jamais deux synchronisations en parallèle : un appel pendant un envoi attend le résultat de celui-ci
+  /// (deux envois simultanés se gênaient côté serveur et pouvaient faire perdre le résultat de l'analyse).
+  Future<SyncReport> run() => _running ??= _run().whenComplete(() => _running = null);
+
+  Future<SyncReport> _run() async {
     final report = SyncReport();
     final pending = await store.unsynced();
     final byId = {for (final r in await store.patients()) r.clientId: r};

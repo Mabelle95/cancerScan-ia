@@ -49,6 +49,8 @@ export interface FormField {
   show_if?: { field: string; equals?: FieldValue; greater_than?: number };
   ml?: boolean;
   help?: string;
+  /** Question posée après le résultat de l'IA (appréciation de l'agent) : cachée pendant la saisie */
+  after_result?: boolean;
 }
 export interface FormSection { id: string; title: string; icon?: string; fields: FormField[] }
 export interface FormDef { pathology: Pathology; title: string; version: string; validated: boolean; sections: FormSection[] }
@@ -285,6 +287,7 @@ export const api = {
   screening: (id: string) => request<Screening>("GET", `/screenings/${id}`),
   updateScreening: (id: string, data: FormData) => request<SubmitResult>("PUT", `/screenings/${id}`, { data }),
   submitScreening: (id: string) => request<SubmitResult>("POST", `/screenings/${id}/submit`),
+  saveAgentNotes: (id: string, notes: FormData) => request<Screening>("PATCH", `/screenings/${id}/agent-notes`, notes),
   processPending: () => request<{ pending: number; analysed: number }>("POST", "/screenings/process-pending"),
 
   referrals: (query: { status?: ReferralStatus; direction?: string; pending_decision?: boolean; overdue?: boolean }) =>

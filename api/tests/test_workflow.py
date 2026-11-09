@@ -216,3 +216,28 @@ def test_stats_mask_small_cells(client, login, engine_ok):
     assert stats["totals"]["depistages"] == 6
     assert stats["par_region"] == {"Maritime": 5, "Kara": None}
     assert stats["par_niveau_risque"] == {"faible": 6}
+
+
+def test_agent_opinion_is_given_after_the_ai_result(client, login, engine_ok, engine_down, monkeypatch):
+    from app.services import engine_client
+
+    h = login("agent@cancerscan.tg")
+    pid = _new_patient(client, h)["patient"]["id"]
+    data = {k: v for k, v in SEIN_COMPLET.items() if k != "probabilite_enqueteur"}  # plus demandée avant l'analyse
+    # Sans résultat IA (moteur indisponible), l'appréciation est refusée
+    monkeypatch.setattr(engine_client, "predict", lambda p, f: (_ for _ in ()).throw(engine_client.EngineUnavailable("down")))
+    s = client.post(f"{API}/patients/{pid}/screenings", json={"pathology": "sein", "data": data, "submit": True}, headers=h).json()["screening"]
+    assert s["status"] == "soumis"
+    assert client.patch(f"{API}/screenings/{s['id']}/agent-notes", json={"probabilite_enqueteur": "faible"}, headers=h).status_code == 409
+
+    monkeypatch.setattr(engine_client, "predict", engine_ok)
+    client.post(f"{API}/screenings/process-pending", headers=h)
+    r = client.patch(f"{API}/screenings/{s['id']}/agent-notes", headers=h,
+                     json={"probabilite_enqueteur": "elevee", "conseils_donnes": "Consultation au CHU"})
+    assert r.status_code == 200
+    out = r.json()
+    assert out["data"]["probabilite_enqueteur"] == "elevee" and out["data"]["conseils_donnes"] == "Consultation au CHU"
+    assert len(out["assessments"]) == 1  # l'appréciation ne relance pas l'analyse IA
+    # Seules les questions « après résultat » sont modifiables par cette voie
+    bad = client.patch(f"{API}/screenings/{s['id']}/agent-notes", json={"masse_presente": True}, headers=h)
+    assert bad.status_code == 422

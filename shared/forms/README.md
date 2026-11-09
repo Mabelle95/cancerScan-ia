@@ -20,6 +20,7 @@ Source unique des formulaires CancerScan, utilisée par :
 | `show_if` | affichage conditionnel : `{"field": "...", "equals": ...}` ou `{"field": "...", "greater_than": n}` |
 | `ml` | variable transmise au moteur IA (aucune donnée identifiante ne doit l'être) |
 | `help` | texte d'aide affiché sous le champ |
+| `after_result` | question posée **après** le résultat de l'IA (ex. appréciation de l'agent) : cachée pendant la saisie, enregistrée ensuite sans relancer l'analyse (`PATCH /screenings/{id}/agent-notes`) |
 | `monotone` | `"increasing"` : facteur qui ne peut qu'**augmenter** le risque estimé ; le modèle IA y est contraint (à valider cliniquement). `age_monotone` au niveau du formulaire fait de même pour l'âge |
 
 Une valeur `null` (ou absente) signifie **donnée manquante**, ce qui est distinct d'une

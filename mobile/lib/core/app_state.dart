@@ -43,6 +43,8 @@ class AppState extends ChangeNotifier {
   DateTime? lastSync;
   String? lastSyncMessage;
   bool online = true;
+  /// Dernière synchronisation refusée par le serveur (erreur 5xx) : distinct d'une absence de réseau
+  bool serverError = false;
 
   bool get isLoggedIn => user != null;
   bool can(String perm) => permissions.contains(perm);
@@ -206,6 +208,7 @@ class AppState extends ChangeNotifier {
       final report = await sync.run();
       online = true;
       needsLogin = false;
+      serverError = false;
       lastSync = DateTime.now();
       await store.putJson('last_sync', lastSync!.toIso8601String());
       await store.purgeSynced();
@@ -223,7 +226,9 @@ class AppState extends ChangeNotifier {
       rethrow;
     } on ApiException catch (e) {
       if (e.isUnauthorized) needsLogin = true;
-      lastSyncMessage = e.message;
+      // Erreur du serveur : on reste « en ligne », les saisies restent sur le téléphone et repartiront.
+      lastSyncMessage = e.status >= 500 ? "Le serveur n'a pas pu traiter l'envoi : nouvel essai automatique." : e.message;
+      serverError = e.status >= 500;
       rethrow;
     } finally {
       syncing = false;

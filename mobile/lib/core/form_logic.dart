@@ -39,6 +39,7 @@ class FormFieldDef {
     this.alertWhen,
     this.showIf,
     this.help,
+    this.afterResult = false,
   });
 
   final String id;
@@ -53,6 +54,8 @@ class FormFieldDef {
   final Object? alertWhen;
   final ShowIf? showIf;
   final String? help;
+  /// Question posée APRÈS le résultat de l'IA (ex. appréciation de l'agent) : cachée pendant la saisie.
+  final bool afterResult;
 
   factory FormFieldDef.fromJson(Map<String, dynamic> j) => FormFieldDef(
         id: j['id'] as String,
@@ -67,6 +70,7 @@ class FormFieldDef {
         alertWhen: j['alert_when'],
         showIf: j['show_if'] == null ? null : ShowIf.fromJson(j['show_if'] as Map<String, dynamic>),
         help: j['help'] as String?,
+        afterResult: j['after_result'] == true,
       );
 }
 

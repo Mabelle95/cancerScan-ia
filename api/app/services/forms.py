@@ -136,3 +136,29 @@ def ml_features(pathology: str, cleaned: dict, age: int | None) -> dict[str, Any
         if f.get("ml"):
             features[f["id"]] = cleaned.get(f["id"])
     return features
+
+
+def after_result_fields(pathology: str) -> dict[str, dict]:
+    """Questions posées après le résultat de l'IA (« after_result ») : jamais exigées à la soumission."""
+    return {f["id"]: f for _, f in iter_fields(get_form(pathology)) if f.get("after_result")}
+
+
+def check_after_result(pathology: str, notes: dict) -> tuple[dict, dict[str, str]]:
+    """Valide une appréciation post-résultat : seuls les champs « after_result » sont acceptés."""
+    allowed = after_result_fields(pathology)
+    cleaned, errors = {}, {}
+    for key, value in notes.items():
+        f = allowed.get(key)
+        if f is None:
+            errors[key] = "Champ non modifiable après l'analyse"
+            continue
+        if is_missing(value):
+            cleaned[key] = None
+            continue
+        err = _check_value(f, value)
+        if err:
+            errors[key] = err
+        else:
+            cleaned[key] = value
+    return cleaned, errors
+

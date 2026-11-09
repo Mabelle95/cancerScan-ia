@@ -29,7 +29,7 @@ class ApiClient {
   final http.Client _http;
   final Duration timeout;
 
-  Future<dynamic> _send(String method, String path, {Object? body, Map<String, String>? query}) async {
+  Future<dynamic> _send(String method, String path, {Object? body, Map<String, String>? query, Duration? timeout}) async {
     final uri = Uri.parse('$baseUrl$path').replace(queryParameters: (query?.isEmpty ?? true) ? null : query);
     final headers = {
       'Accept': 'application/json',
@@ -40,7 +40,7 @@ class ApiClient {
     try {
       final req = http.Request(method, uri)..headers.addAll(headers);
       if (body != null) req.body = jsonEncode(body);
-      res = await http.Response.fromStream(await _http.send(req).timeout(timeout));
+      res = await http.Response.fromStream(await _http.send(req).timeout(timeout ?? this.timeout));
     } on SocketException {
       throw const OfflineException();
     } on TimeoutException {
@@ -79,8 +79,13 @@ class ApiClient {
   Future<Map<String, dynamic>> screening(String id) async =>
       (await _send('GET', '/screenings/$id')) as Map<String, dynamic>;
 
+  /// L'envoi inclut l'analyse IA de chaque dépistage côté serveur : délai plus long.
   Future<Map<String, dynamic>> sync(Map<String, Object?> batch) async =>
-      (await _send('POST', '/sync', body: batch)) as Map<String, dynamic>;
+      (await _send('POST', '/sync', body: batch, timeout: const Duration(seconds: 90))) as Map<String, dynamic>;
+
+  /// Appréciation de l'agent, saisie APRÈS le résultat de l'IA (ne relance pas l'analyse).
+  Future<Map<String, dynamic>> saveAgentNotes(String screeningId, Map<String, Object?> notes) async =>
+      (await _send('PATCH', '/screenings/$screeningId/agent-notes', body: notes)) as Map<String, dynamic>;
 
   Future<void> reportError(Map<String, Object?> report) async => _send('POST', '/client-errors', body: report);
 }

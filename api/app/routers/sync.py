@@ -7,6 +7,7 @@ Les éléments sont traités un par un pour qu'une erreur n'empêche pas la sync
 from fastapi import APIRouter, HTTPException
 from pydantic import ValidationError
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.core.permissions import Perm
 from app.deps import DbSession, require
@@ -26,6 +27,12 @@ def _sync_screening(db, user, patient, item) -> SyncItemResult:
     return SyncItemResult(client_uuid=item.client_uuid, server_id=screening.id, status="created")
 
 
+def _already(db, model, client_uuid) -> SyncItemResult | None:
+    """Envoi concurrent du même élément (ex. deux synchronisations simultanées) : l'autre requête l'a déjà créé."""
+    found = db.scalar(select(model).where(model.client_uuid == client_uuid))
+    return SyncItemResult(client_uuid=client_uuid, server_id=found.id, status="already_synced") if found else None
+
+
 @router.post("", response_model=SyncOut)
 def sync(body: SyncIn, db: DbSession, user=require(Perm.SCREENINGS_WRITE)):
     patients_out: list[SyncItemResult] = []
@@ -42,6 +49,9 @@ def sync(body: SyncIn, db: DbSession, user=require(Perm.SCREENINGS_WRITE)):
                     patients_out.append(SyncItemResult(client_uuid=item.client_uuid, server_id=patient.id, status="created"))
                 for s in item.screenings:
                     screenings_out.append(_sync_screening(db, user, patient, s))
+        except IntegrityError:
+            patients_out.append(_already(db, Patient, item.client_uuid)
+                                or SyncItemResult(client_uuid=item.client_uuid, status="error", detail="Conflit d'enregistrement"))
         except (HTTPException, ValueError, ValidationError) as exc:
             patients_out.append(SyncItemResult(client_uuid=item.client_uuid, status="error", detail=_detail(exc)))
 
@@ -50,6 +60,9 @@ def sync(body: SyncIn, db: DbSession, user=require(Perm.SCREENINGS_WRITE)):
             with db.begin_nested():
                 patient = get_accessible_patient(db, user, item.patient_id)
                 screenings_out.append(_sync_screening(db, user, patient, item))
+        except IntegrityError:
+            screenings_out.append(_already(db, Screening, item.client_uuid)
+                                  or SyncItemResult(client_uuid=item.client_uuid, status="error", detail="Conflit d'enregistrement"))
         except (HTTPException, ValueError, ValidationError) as exc:
             screenings_out.append(SyncItemResult(client_uuid=item.client_uuid, status="error", detail=_detail(exc)))
 

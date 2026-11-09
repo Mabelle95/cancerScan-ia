@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/api_client.dart';
 import '../core/app_state.dart';
 import '../core/form_logic.dart';
 import '../core/local_store.dart';
 import '../theme.dart';
+import '../widgets/form_renderer.dart';
 import '../widgets/ui.dart';
 import 'wizard_screen.dart';
 
@@ -20,18 +24,56 @@ class ResultScreen extends StatefulWidget {
 class _ResultScreenState extends State<ResultScreen> {
   LocalRecord? _record;
   LocalRecord? _patient;
+  Timer? _retry;
+  int _attempts = 0;
+  Map<String, Object?>? _notes;
+  bool _savingNotes = false;
 
   @override
   void initState() {
     super.initState();
     _load();
     context.read<AppState>().addListener(_load);
+    // Tant que le résultat de l'IA n'est pas arrivé, on retente tout seul (sans action de l'agent).
+    _retry = Timer.periodic(const Duration(seconds: 15), (_) => _retryIfPending());
   }
 
   @override
   void dispose() {
+    _retry?.cancel();
     context.read<AppState>().removeListener(_load);
     super.dispose();
+  }
+
+  void _retryIfPending() {
+    final app = context.read<AppState>();
+    final analysed = _record?.result?['risk_level'] != null;
+    if (!mounted || analysed || _attempts >= 12) {
+      if (analysed || _attempts >= 12) _retry?.cancel();
+      return;
+    }
+    if (!app.syncing) {
+      _attempts++;
+      unawaited(app.syncNow(silent: true));
+    }
+  }
+
+  /// Appréciation de l'agent, donnée après le résultat : envoyée directement au serveur (sans relancer l'analyse).
+  Future<void> _saveNotes(LocalRecord r) async {
+    final app = context.read<AppState>();
+    setState(() => _savingNotes = true);
+    try {
+      await app.api.saveAgentNotes(r.serverId!, _notes ?? {});
+      r.payload['agent_notes'] = _notes;
+      await app.store.save(r);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Appréciation enregistrée')));
+    } on OfflineException {
+      if (mounted) showError(context, 'Connexion nécessaire pour enregistrer votre appréciation.');
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _savingNotes = false);
+    }
   }
 
   Future<void> _load() async {
@@ -126,8 +168,12 @@ class _ResultScreenState extends State<ResultScreen> {
               kind: NoticeKind.warning,
               title: 'Analyse IA non encore calculée',
               text: r.state == SyncState.pending
-                  ? 'Le dépistage est enregistré sur le téléphone. Il sera envoyé et analysé dès que la connexion sera disponible.'
-                  : 'Le serveur n\'a pas encore produit de résultat (moteur IA indisponible ou modèle non déployé).',
+                  ? (!app.online
+                      ? 'Pas de connexion : le dépistage est enregistré sur le téléphone. Il sera envoyé et analysé dès le retour du réseau.'
+                      : app.serverError
+                          ? "Le serveur n'a pas pu traiter l'envoi. Nouvel essai automatique dans quelques secondes ; le dépistage reste sur le téléphone."
+                          : 'Envoi au serveur et analyse en cours…')
+                  : "Le serveur n'a pas encore produit de résultat (moteur IA indisponible ou modèle non déployé). Nouvel essai automatique.",
               action: OutlinedButton.icon(
                 onPressed: app.syncing ? null : () => app.syncNow(silent: true),
                 icon: const Icon(Icons.sync),
@@ -191,6 +237,32 @@ class _ResultScreenState extends State<ResultScreen> {
 
           // --- Orientation ---------------------------------------------------------------
           _OrientationCard(level: analysed ? res['proposed_level'] as String? : (alerts.isNotEmpty ? 'moyen' : null), result: res, pending: !analysed),
+
+          // --- Appréciation de l'agent : seulement APRÈS le résultat de l'IA ---------------
+          if (analysed && r.serverId != null && app.forms[r.pathology] != null) ...[
+            for (final section in app.forms[r.pathology]!.sections.where((s) => s.fields.any((f) => f.afterResult)))
+              InfoCard(
+                icon: Icons.psychology_alt_rounded,
+                title: 'Votre appréciation',
+                children: [
+                  const Text('Après avoir pris connaissance du résultat, donnez votre appréciation clinique et les conseils donnés.',
+                      style: TextStyle(color: Colors.black54, fontSize: 14)),
+                  const SizedBox(height: 14),
+                  SectionFields(
+                    section: section,
+                    afterResult: true,
+                    data: _notes ??= Map<String, Object?>.from(r.payload['agent_notes'] as Map? ?? {}),
+                    errors: const {},
+                    onChanged: (id, v) => setState(() => v == null ? _notes!.remove(id) : _notes![id] = v),
+                  ),
+                  FilledButton.icon(
+                    onPressed: _savingNotes ? null : () => _saveNotes(r),
+                    icon: const Icon(Icons.check_rounded),
+                    label: Text(_savingNotes ? 'Enregistrement…' : 'Enregistrer mon appréciation'),
+                  ),
+                ],
+              ),
+          ],
 
           const SizedBox(height: 8),
           const Text('Un risque faible ne signifie jamais qu\'un cancer est absent. Le diagnostic relève des professionnels de santé.',

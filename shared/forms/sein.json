@@ -1,7 +1,7 @@
 {
   "pathology": "sein",
   "title": "Dépistage du cancer du sein",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "validated": false,
   "age_monotone": "increasing",
   "sections": [
@@ -592,10 +592,9 @@
       "fields": [
         {
           "id": "probabilite_enqueteur",
-          "label": "Votre impression : probabilité de cancer",
+          "label": "Votre appréciation de la probabilité de cancer",
           "type": "choice",
-          "required": true,
-          "help": "Votre avis avant l'analyse IA. Il n'est pas transmis au modèle : il sert à comparer l'IA au jugement de l'agent.",
+          "help": "À donner après le résultat de l'analyse IA. Non transmise au modèle.",
           "options": [
             {
               "value": "faible",
@@ -609,12 +608,14 @@
               "value": "elevee",
               "label": "Élevée"
             }
-          ]
+          ],
+          "after_result": true
         },
         {
           "id": "conseils_donnes",
           "label": "Conseils donnés à la patiente",
-          "type": "text"
+          "type": "text",
+          "after_result": true
         }
       ]
     }

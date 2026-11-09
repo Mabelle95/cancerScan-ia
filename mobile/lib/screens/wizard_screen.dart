@@ -169,13 +169,16 @@ class _WizardScreenState extends State<WizardScreen> {
               if (_step == 0 && widget.isNewPatient) _FieldsCard(title: 'Identification', icon: Icons.badge_rounded, child: _identification()),
               if (_step == 0 && !widget.isNewPatient) Notice(text: 'Patiente : ${widget.patientLabel ?? ''}'),
               if (_isLast) _recap(form),
-              _FieldsCard(
-                title: _step == 0 ? 'Antécédents' : (_isLast ? 'Votre appréciation' : null),
-                icon: _step == 0 ? Icons.family_restroom_rounded : (_isLast ? Icons.psychology_alt_rounded : null),
-                child: SectionFields(section: section, data: _data, errors: _errors, onChanged: (id, v) => setState(() => v == null ? _data.remove(id) : _data[id] = v)),
-              ),
+              // Les questions « après résultat » (appréciation de l'agent) ne sont pas posées avant l'analyse
+              if (section.fields.any((f) => !f.afterResult))
+                _FieldsCard(
+                  title: _step == 0 ? 'Antécédents' : null,
+                  icon: _step == 0 ? Icons.family_restroom_rounded : null,
+                  child: SectionFields(section: section, data: _data, errors: _errors, onChanged: (id, v) => setState(() => v == null ? _data.remove(id) : _data[id] = v)),
+                ),
               if (_isLast)
                 const Notice(text: 'Appuyez sur « Analyser » pour enregistrer le dépistage et obtenir l\'analyse IA du risque. '
+                    'Vous donnerez votre appréciation après avoir vu le résultat. '
                     'Sans connexion, l\'analyse sera faite automatiquement à la synchronisation.'),
             ],
           ),

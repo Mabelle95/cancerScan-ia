@@ -191,4 +191,11 @@ void main() {
     expect(server.errorReports.single['source'], 'mobile');
     expect(server.errorReports.single.containsKey('time'), isFalse);
   });
+
+  test("deux synchronisations simultanées ne font qu'un seul envoi au serveur", () async {
+    await app.createPatient({'region': 'Kara', 'consent_given': true});
+    final results = await Future.wait([app.sync.run(), app.sync.run(), app.syncNow()]);
+    expect(server.batches.length, 1);
+    expect(results.whereType<Object>().length, 3); // les trois appels reçoivent le même rapport
+  });
 }

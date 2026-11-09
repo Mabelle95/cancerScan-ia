@@ -19,17 +19,21 @@ const STEP_LABELS: Record<string, string> = {
 
 export function FormRenderer({ form, data, onChange, errors, missing }: Props) {
   const set = (id: string, value: FieldValue) => onChange({ ...data, [id]: value });
-  const total = form.sections.length;
+  // Sections ayant au moins une question posée pendant la saisie (pas uniquement « après résultat »)
+  const sections = form.sections.filter((s) => s.fields.some((f) => !f.after_result));
+  const total = sections.length;
 
   return (
     <div>
       <nav className="stepper" aria-label="Étapes du formulaire">
-        {form.sections.map((s, i) => (
+        {sections.map((s, i) => (
           <a key={s.id} href={`#section-${s.id}`}><span className="num">{i + 1}</span>{STEP_LABELS[s.id] ?? s.title}</a>
         ))}
       </nav>
-      {form.sections.map((section, i) => {
-        const visible = section.fields.filter((f) => isVisible(f, data));
+      {sections.map((section, i) => {
+        // Les questions « après résultat » (appréciation de l'agent) ne sont pas posées avant l'analyse
+        const visible = section.fields.filter((f) => !f.after_result && isVisible(f, data));
+        if (!visible.length) return null;
         const icon = SECTION_ICONS[section.icon ?? ""] ?? "note";
         return (
           <section key={section.id} id={`section-${section.id}`} className="card" style={{ scrollMarginTop: 16 }}>
@@ -51,7 +55,7 @@ export function FormRenderer({ form, data, onChange, errors, missing }: Props) {
   );
 }
 
-function Field({ field, value, onChange, error }: { field: FormField; value: FieldValue; onChange: (v: FieldValue) => void; error?: string }) {
+export function Field({ field, value, onChange, error }: { field: FormField; value: FieldValue; onChange: (v: FieldValue) => void; error?: string }) {
   const alert = isAlert(field, value);
   const labelId = `lbl-${field.id}`;
   const labelText = (

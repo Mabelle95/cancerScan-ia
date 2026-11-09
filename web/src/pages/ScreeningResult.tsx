@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, type Facility, type Referral, type ReferralStatus, type Screening } from "../api";
+import { api, type Facility, type FormData, type FormDef, type Referral, type ReferralStatus, type Screening } from "../api";
+import { Field } from "../components/FormRenderer";
 import { useAuth } from "../auth";
 import { Icon } from "../components/Icon";
 import {
@@ -127,6 +128,9 @@ export function ScreeningResult() {
         </Card>
       </div>
 
+      {/* Appréciation de l'agent : seulement APRÈS le résultat de l'IA (comme sur le mobile) */}
+      {a && form && can("screenings:write") && <AgentNotes screening={s} form={form} onSaved={screening.reload} />}
+
       {form && <DataRecap screening={s} form={form} />}
     </>
   );
@@ -229,6 +233,39 @@ function DataRecap({ screening, form }: { screening: Screening; form: NonNullabl
       {screening.form_version !== form.version && (
         <p className="field-help">Saisi avec la version {screening.form_version} du formulaire (version actuelle : {form.version}).</p>
       )}
+    </Card>
+  );
+}
+
+function AgentNotes({ screening, form, onSaved }: { screening: Screening; form: FormDef; onSaved: () => void }) {
+  const fields = form.sections.flatMap((x) => x.fields).filter((f) => f.after_result);
+  const [notes, setNotes] = useState<FormData>(() => Object.fromEntries(fields.map((f) => [f.id, screening.data[f.id] ?? null])));
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  if (!fields.length) return null;
+
+  const save = async () => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      await api.saveAgentNotes(screening.id, notes);
+      setMessage({ ok: true, text: "Appréciation enregistrée." });
+      onSaved();
+    } catch (e) {
+      setMessage({ ok: false, text: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card title="Votre appréciation" icon="brain">
+      <p className="muted">Après avoir pris connaissance du résultat, donnez votre appréciation clinique et les conseils donnés à la patiente.</p>
+      {fields.map((f) => (
+        <Field key={f.id} field={f} value={notes[f.id] ?? null} onChange={(v) => setNotes({ ...notes, [f.id]: v })} />
+      ))}
+      {message && <div className={`notice ${message.ok ? "notice-ok" : "notice-danger"}`}>{message.text}</div>}
+      <button className="btn btn-primary" disabled={busy} onClick={save}>{busy ? "Enregistrement…" : "Enregistrer mon appréciation"}</button>
     </Card>
   );
 }
