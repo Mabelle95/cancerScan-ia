@@ -1,0 +1,49 @@
+{
+  "pathology": "col",
+  "title": "Dépistage du cancer du col de l'utérus",
+  "version": "0.1.0",
+  "validated": false,
+  "sections": [
+    {
+      "id": "facteurs_risque",
+      "title": "Facteurs de risque",
+      "fields": [
+        {"id": "atcd_hpv", "label": "Antécédent d'infection à HPV connue", "type": "boolean", "required": true, "ml": true},
+        {"id": "vaccin_hpv", "label": "Vaccination HPV", "type": "choice", "ml": true,
+         "options": [{"value": "complet", "label": "Complète"}, {"value": "partiel", "label": "Partielle"}, {"value": "non", "label": "Non vaccinée"}, {"value": "inconnu", "label": "Inconnu"}]},
+        {"id": "depistage_col_anterieur", "label": "Dépistage du col antérieur", "type": "choice", "required": true, "ml": true,
+         "options": [{"value": "jamais", "label": "Jamais"}, {"value": "normal", "label": "Oui, normal"}, {"value": "anormal", "label": "Oui, anormal"}, {"value": "inconnu", "label": "Résultat inconnu"}]},
+        {"id": "atcd_lesion_precancereuse", "label": "Antécédent de lésion précancéreuse du col", "type": "boolean", "ml": true},
+        {"id": "statut_vih", "label": "Statut VIH", "type": "choice", "ml": true,
+         "options": [{"value": "negatif", "label": "Négatif"}, {"value": "positif", "label": "Positif"}, {"value": "inconnu", "label": "Inconnu / non communiqué"}]},
+        {"id": "tabac", "label": "Tabagisme", "type": "boolean", "ml": true},
+        {"id": "nb_grossesses", "label": "Nombre de grossesses", "type": "integer", "min": 0, "max": 20, "ml": true}
+      ]
+    },
+    {
+      "id": "symptomes",
+      "title": "Symptômes actuels",
+      "fields": [
+        {"id": "saignement_anormal", "label": "Saignements vaginaux anormaux", "type": "boolean", "required": true, "ml": true, "alert_when": true},
+        {"id": "saignement_post_coital", "label": "Saignements après les rapports", "type": "boolean", "required": true, "ml": true, "alert_when": true},
+        {"id": "pertes_inhabituelles", "label": "Pertes vaginales inhabituelles", "type": "boolean", "ml": true},
+        {"id": "douleur_pelvienne", "label": "Douleurs pelviennes", "type": "boolean", "ml": true},
+        {"id": "dyspareunie", "label": "Douleurs pendant les rapports", "type": "boolean", "ml": true}
+      ]
+    },
+    {
+      "id": "examen_clinique",
+      "title": "Examen clinique et dépistage",
+      "fields": [
+        {"id": "iva_ivl", "label": "Inspection visuelle (IVA / IVL)", "type": "choice", "ml": true,
+         "options": [{"value": "non_realise", "label": "Non réalisée"}, {"value": "negatif", "label": "Négative"}, {"value": "positif", "label": "Positive", "alert": true}, {"value": "suspect_cancer", "label": "Suspicion de cancer", "alert": true}]},
+        {"id": "test_hpv", "label": "Test HPV", "type": "choice", "ml": true,
+         "options": [{"value": "non_realise", "label": "Non réalisé"}, {"value": "negatif", "label": "Négatif"}, {"value": "positif", "label": "Positif"}]},
+        {"id": "cytologie", "label": "Cytologie (frottis)", "type": "choice", "ml": true,
+         "options": [{"value": "non_realise", "label": "Non réalisée"}, {"value": "normal", "label": "Normale"}, {"value": "ascus_lsil", "label": "ASC-US / LSIL"}, {"value": "hsil_plus", "label": "HSIL ou plus", "alert": true}]},
+        {"id": "lesion_visible", "label": "Lésion visible du col", "type": "boolean", "ml": true, "alert_when": true},
+        {"id": "observations", "label": "Observations du professionnel", "type": "text"}
+      ]
+    }
+  ]
+}

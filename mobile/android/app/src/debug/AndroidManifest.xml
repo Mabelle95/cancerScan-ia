@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- The INTERNET permission is required for development (hot reload, breakpoints). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- DÉVELOPPEMENT UNIQUEMENT : autorise HTTP non chiffré pour joindre l'API locale (10.0.2.2).
+         La version de production n'a pas cette exception : HTTPS obligatoire. -->
+    <application android:usesCleartextTraffic="true" tools:replace="android:usesCleartextTraffic" />
+</manifest>

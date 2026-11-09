@@ -1,0 +1,44 @@
+# Environnements
+.env
+*.env.local
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Données et modèles (jamais de données de patientes dans git)
+ml/data/
+ml/models/**/*.joblib
+*.csv
+*.parquet
+
+# Node / Web
+node_modules/
+web/dist/
+
+# Flutter
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins*
+mobile/pubspec.lock
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs (peuvent contenir des identifiants techniques)
+logs/
+*.log
+
+# Documents de référence externes (articles, cahier des charges) : non versionnés
+*.pdf
+
+# Artefacts de compilation TypeScript
+*.tsbuildinfo
+
+# Modèles entraînés : régénérés par « python -m cancerscan_ml.train » (voir README)
+ml/models/

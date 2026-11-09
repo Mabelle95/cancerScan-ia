@@ -1,0 +1,61 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cancerscan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cancerscan}
+      POSTGRES_DB: ${POSTGRES_DB:-cancerscan}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cancerscan}"]
+      interval: 5s
+      retries: 10
+
+  engine:
+    build:
+      context: .
+      dockerfile: ml/Dockerfile
+    env_file: .env
+    volumes:
+      - ./ml/models:/app/ml/models
+    ports:
+      - "8001:8001"
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    env_file: .env
+    environment:
+      FORMS_DIR: /app/shared/forms
+    depends_on:
+      db:
+        condition: service_healthy
+      engine:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    command: sh -c "alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      - ./api/app:/app/api/app
+      - ./shared:/app/shared
+
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      VITE_API_URL: http://localhost:8000/api/v1
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

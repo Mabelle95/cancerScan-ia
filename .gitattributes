@@ -1,0 +1,14 @@
+# Fins de ligne uniformes (LF) dans le dépôt, quel que soit le système
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Fichiers binaires : jamais de conversion
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.jar binary
+*.xlsx binary
+*.zip binary

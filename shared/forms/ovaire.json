@@ -1,0 +1,43 @@
+{
+  "pathology": "ovaire",
+  "title": "Dépistage du cancer de l'ovaire",
+  "version": "0.1.0",
+  "validated": false,
+  "sections": [
+    {
+      "id": "facteurs_risque",
+      "title": "Facteurs de risque",
+      "fields": [
+        {"id": "atcd_familial_sein_ovaire", "label": "Antécédent familial de cancer de l'ovaire ou du sein", "type": "boolean", "required": true, "ml": true},
+        {"id": "mutation_brca_connue", "label": "Mutation BRCA connue", "type": "choice", "ml": true,
+         "options": [{"value": "oui", "label": "Oui"}, {"value": "non", "label": "Non"}, {"value": "non_teste", "label": "Non testée / inconnu"}]},
+        {"id": "menopause", "label": "Ménopausée", "type": "boolean", "ml": true},
+        {"id": "nb_grossesses_terme", "label": "Nombre de grossesses menées à terme", "type": "integer", "min": 0, "max": 20, "ml": true},
+        {"id": "endometriose", "label": "Endométriose connue", "type": "boolean", "ml": true}
+      ]
+    },
+    {
+      "id": "symptomes",
+      "title": "Symptômes persistants (plus de 3 semaines)",
+      "fields": [
+        {"id": "ballonnement_persistant", "label": "Ballonnements ou augmentation du volume abdominal", "type": "boolean", "required": true, "ml": true, "alert_when": true},
+        {"id": "douleur_pelvienne", "label": "Douleurs pelviennes ou abdominales", "type": "boolean", "required": true, "ml": true},
+        {"id": "satiete_precoce", "label": "Satiété précoce / perte d'appétit", "type": "boolean", "ml": true},
+        {"id": "troubles_urinaires", "label": "Envies fréquentes ou urgentes d'uriner", "type": "boolean", "ml": true},
+        {"id": "perte_poids", "label": "Perte de poids inexpliquée", "type": "boolean", "ml": true, "alert_when": true},
+        {"id": "duree_symptomes_semaines", "label": "Durée des symptômes", "type": "integer", "min": 0, "max": 520, "unit": "semaines", "ml": true}
+      ]
+    },
+    {
+      "id": "examen_clinique",
+      "title": "Examen clinique et examens",
+      "fields": [
+        {"id": "masse_pelvienne", "label": "Masse pelvienne ou abdominale palpable", "type": "boolean", "ml": true, "alert_when": true},
+        {"id": "ascite", "label": "Ascite", "type": "boolean", "ml": true, "alert_when": true},
+        {"id": "echographie_pelvienne", "label": "Échographie pelvienne", "type": "choice", "ml": true,
+         "options": [{"value": "non_realisee", "label": "Non réalisée"}, {"value": "normale", "label": "Normale"}, {"value": "kyste_simple", "label": "Kyste simple"}, {"value": "masse_complexe", "label": "Masse complexe / suspecte", "alert": true}]},
+        {"id": "observations", "label": "Observations du professionnel", "type": "text"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Écran de démarrage CancerScan (Android < 12) : fond bleu et mallette blanche -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="315" android:startColor="#1565C0" android:centerColor="#2196F3" android:endColor="#42A5F5" />
+        </shape>
+    </item>
+    <item android:gravity="center" android:width="160dp" android:height="160dp" android:drawable="@drawable/splash_logo" />
+</layer-list>

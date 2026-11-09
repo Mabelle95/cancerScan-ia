@@ -1,0 +1,43 @@
+{
+  "pathology": "endometre",
+  "title": "Dépistage du cancer de l'endomètre",
+  "version": "0.1.0",
+  "validated": false,
+  "sections": [
+    {
+      "id": "facteurs_risque",
+      "title": "Facteurs de risque",
+      "fields": [
+        {"id": "menopause", "label": "Ménopausée", "type": "boolean", "required": true, "ml": true},
+        {"id": "obesite", "label": "Surpoids important / obésité", "type": "boolean", "ml": true},
+        {"id": "diabete", "label": "Diabète", "type": "boolean", "ml": true},
+        {"id": "hypertension", "label": "Hypertension artérielle", "type": "boolean", "ml": true},
+        {"id": "nulliparite", "label": "Aucune grossesse menée à terme", "type": "boolean", "ml": true},
+        {"id": "traitement_oestrogenes_seuls", "label": "Traitement par œstrogènes seuls ou tamoxifène", "type": "boolean", "ml": true},
+        {"id": "atcd_familial_lynch", "label": "Antécédents familiaux de cancers colorectal ou de l'endomètre", "type": "boolean", "ml": true}
+      ]
+    },
+    {
+      "id": "symptomes",
+      "title": "Symptômes actuels",
+      "fields": [
+        {"id": "saignement_post_menopause", "label": "Saignement après la ménopause", "type": "boolean", "ml": true, "alert_when": true,
+         "show_if": {"field": "menopause", "equals": true}},
+        {"id": "saignement_intermenstruel", "label": "Saignements entre les règles ou règles très abondantes", "type": "boolean", "ml": true,
+         "show_if": {"field": "menopause", "equals": false}},
+        {"id": "pertes_anormales", "label": "Pertes vaginales anormales", "type": "boolean", "ml": true},
+        {"id": "douleur_pelvienne", "label": "Douleurs pelviennes", "type": "boolean", "ml": true}
+      ]
+    },
+    {
+      "id": "examen_clinique",
+      "title": "Examen clinique et examens",
+      "fields": [
+        {"id": "epaisseur_endometre_mm", "label": "Épaisseur de l'endomètre (échographie)", "type": "number", "min": 0, "max": 60, "unit": "mm", "ml": true},
+        {"id": "biopsie_endometre", "label": "Biopsie de l'endomètre", "type": "choice",
+         "options": [{"value": "non_realisee", "label": "Non réalisée"}, {"value": "benigne", "label": "Bénigne"}, {"value": "hyperplasie_atypique", "label": "Hyperplasie atypique", "alert": true}, {"value": "maligne", "label": "Maligne", "alert": true}]},
+        {"id": "observations", "label": "Observations du professionnel", "type": "text"}
+      ]
+    }
+  ]
+}
