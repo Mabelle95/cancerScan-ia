@@ -120,3 +120,61 @@ def test_breast_lesions_usg_import_keeps_missing_distinct():
     assert pd.isna(out.loc[1, "masse_presente"]) and pd.isna(out.loc[1, "age"])   # inconnu reste inconnu
     assert out.loc[2, "masse_presente"] == False and pd.isna(out.loc[2, "atcd_familial_sein_ovaire"])  # noqa: E712
     assert unmapped_values(raw) == {"Signs": set(), "Symptoms": set()}
+
+
+def _adversarial_sein(n=900, seed=0):
+    """Données piégées : l'antécédent familial est associé à MOINS de cancers (comme le biais de BrEaST)."""
+    rng = np.random.default_rng(seed)
+    fam = rng.random(n) < 0.3
+    mass = rng.random(n) < 0.3
+    logit = -1.0 + 2.0 * mass - 1.5 * fam
+    y = (rng.random(n) < 1 / (1 + np.exp(-logit))).astype(int)
+    records = [{"age": float(a), "atcd_familial_sein_ovaire": bool(f), "masse_presente": bool(m), "modif_peau": False,
+                "retraction_mamelon": False} for a, f, m in zip(rng.integers(30, 70, n), fam, mass)]
+    return to_frame("sein", records), y
+
+
+@pytest.mark.parametrize("algo", ["logistic_regression", "random_forest", "xgboost"])
+def test_monotone_constraint_overrides_biased_data(algo):
+    from cancerscan_ml.train import candidates
+    X, y = _adversarial_sein()
+    pipe, _ = candidates("sein", pos_weight=2.0, seed=0, missing_indicators=False, monotone=True)[algo]
+    if algo != "logistic_regression":
+        pipe.set_params(clf__base__n_estimators=60)
+    pipe.fit(X, y)
+    with_fam = X.assign(atcd_familial_sein_ovaire=1.0)
+    without = X.assign(atcd_familial_sein_ovaire=0.0)
+    diff = pipe.predict_proba(with_fam)[:, 1] - pipe.predict_proba(without)[:, 1]
+    assert diff.min() >= -1e-9  # avoir un antécédent familial ne fait JAMAIS baisser le risque
+
+
+def test_unconstrained_model_does_learn_the_bias():
+    """Contrôle : sans contrainte, le modèle apprend bien l'effet inverse — la contrainte est donc utile."""
+    from cancerscan_ml.train import candidates
+    X, y = _adversarial_sein()
+    pipe, _ = candidates("sein", pos_weight=2.0, seed=0, missing_indicators=False, monotone=False)["logistic_regression"]
+    pipe.fit(X, y)
+    names = list(pipe.named_steps["pre"].get_feature_names_out())
+    assert pipe.named_steps["clf"].coef_[0][names.index("atcd_familial_sein_ovaire")] < 0
+
+
+def test_constrained_lr_matches_sklearn_when_unconstrained():
+    from sklearn.linear_model import LogisticRegression
+    from cancerscan_ml.monotone import ConstrainedLogisticRegression
+    rng = np.random.default_rng(1)
+    X = rng.normal(size=(400, 4))
+    y = (X @ np.array([1.0, -0.5, 0.0, 2.0]) + rng.normal(size=400) > 0).astype(int)
+    ours = ConstrainedLogisticRegression(C=1.0).fit(X, y)
+    ref = LogisticRegression(C=1.0).fit(X, y)
+    assert np.allclose(ours.coef_, ref.coef_, atol=1e-3) and np.allclose(ours.intercept_, ref.intercept_, atol=1e-3)
+    constrained = ConstrainedLogisticRegression(C=1.0, leading_constraints=(0, 1)).fit(X, y)
+    assert constrained.coef_[0][1] >= 0  # coefficient naturellement négatif, forcé à ≥ 0
+
+
+def test_explanations_skip_unanswered_factors(trained):
+    models_dir, meta = trained
+    model = registry.load("col", models_dir=models_dir)
+    out = registry.predict(model, {"age": 45, "saignement_post_coital": True, "atcd_hpv": "inconnu", "tabac": None})
+    shown = {e["feature"] for e in out["explanations"]}
+    assert "atcd_hpv" not in shown and "tabac" not in shown  # réponses manquantes : jamais présentées comme facteur
+    assert shown  # les facteurs renseignés restent expliqués

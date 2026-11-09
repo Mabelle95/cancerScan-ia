@@ -98,12 +98,22 @@ provenance des données, statut de validation) et `rapport.md`. Le moteur refuse
 `ENGINE_ALLOW_UNVALIDATED=true` (développement uniquement) ; l'analyse est alors différée et la patiente reste
 orientable par le professionnel.
 
+### Contraintes de monotonie cliniques
+
+Les facteurs déclarés `"monotone": "increasing"` dans le formulaire (antécédents familial et personnel, masse, taille
+de la masse, modification de la peau, rétraction du mamelon, ganglions, traitement hormonal, âge) ne peuvent
+qu'**augmenter** le risque estimé : régression logistique à coefficients bornés, contraintes natives de Random Forest
+et XGBoost. Sans elles, le modèle BrEaST faisait baisser le risque jusqu'à 22 points en cas d'antécédent familial
+(biais d'un petit échantillon) ; avec elles, la performance est identique ou meilleure. La liste des facteurs
+contraints est à valider par les professionnels de santé. `--no-monotone` ne sert qu'à comparer.
+
 ### Règles de sécurité clinique implémentées
 
 - Un **signe d'alerte** saisi impose au minimum une orientation « moyen », même si le modèle estime un risque faible.
 - Une décision prise par un professionnel n'est jamais écrasée par une nouvelle analyse.
 - Le modèle ne reçoit que les variables `ml` du formulaire et l'âge — jamais le nom ni le téléphone.
-- Le moteur refuse un modèle entraîné sur une autre version du formulaire.
+- Le moteur refuse un modèle dont les variables ne correspondent plus au formulaire (ajouter des champs non utilisés par le modèle reste compatible).
+- Une réponse non renseignée n'est jamais présentée comme un facteur explicatif.
 - « Inconnu » / absent est distinct d'une réponse négative, à la saisie comme dans le modèle.
 
 ### Sécurité des données

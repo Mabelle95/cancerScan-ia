@@ -23,13 +23,15 @@ from scipy.stats import loguniform, randint, uniform
 from sklearn.base import clone
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GroupShuffleSplit, RandomizedSearchCV, StratifiedGroupKFold, cross_val_predict
 from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 
 from cancerscan_ml import metrics, registry
-from cancerscan_ml.features import feature_specs, form_version, load_form, preprocessor, to_frame
+from cancerscan_ml.features import (
+    feature_specs, form_version, leading_constraints, load_form, monotone_features, preprocessor, to_frame,
+)
+from cancerscan_ml.monotone import ConstrainedLogisticRegression, MonotoneTreeClassifier
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -89,31 +91,36 @@ def to_X(df: pd.DataFrame, pathology: str) -> pd.DataFrame:
 
 # --- Modèles candidats (CRISP-DM étape 4) -------------------------------------------------
 
-def candidates(pathology: str, pos_weight: float, seed: int, missing_indicators: bool = True) -> dict:
+def candidates(pathology: str, pos_weight: float, seed: int, missing_indicators: bool = True, monotone: bool = True) -> dict:
+    """Modèles candidats. Avec `monotone`, les facteurs déclarés « increasing » dans le formulaire ne peuvent
+    qu'augmenter le risque (voir cancerscan_ml.monotone)."""
+    cst = leading_constraints(pathology) if monotone else ()
+    pre = lambda scale: preprocessor(pathology, scale=scale, missing_indicators=missing_indicators)  # noqa: E731
+    rf = RandomForestClassifier(class_weight="balanced_subsample", n_jobs=-1, random_state=seed)
+    xgb = XGBClassifier(scale_pos_weight=pos_weight, eval_metric="logloss", n_jobs=-1, random_state=seed)
     return {
         "logistic_regression": (
-            Pipeline([("pre", preprocessor(pathology, scale=True, missing_indicators=missing_indicators)),
-                      ("clf", LogisticRegression(class_weight="balanced", max_iter=2000))]),
+            Pipeline([("pre", pre(True)), ("clf", ConstrainedLogisticRegression(class_weight="balanced", leading_constraints=cst))]),
             {"clf__C": loguniform(1e-3, 10)},
         ),
         "random_forest": (
-            Pipeline([("pre", preprocessor(pathology, scale=False, missing_indicators=missing_indicators)),
-                      ("clf", RandomForestClassifier(class_weight="balanced_subsample", n_jobs=-1, random_state=seed))]),
-            {"clf__n_estimators": randint(200, 600), "clf__max_depth": [3, 5, 8, None],
-             "clf__min_samples_leaf": randint(2, 30), "clf__max_features": ["sqrt", 0.5]},
+            Pipeline([("pre", pre(False)), ("clf", MonotoneTreeClassifier(rf, leading_constraints=cst))]),
+            {"clf__base__n_estimators": randint(200, 600), "clf__base__max_depth": [3, 5, 8, None],
+             "clf__base__min_samples_leaf": randint(2, 30), "clf__base__max_features": ["sqrt", 0.5]},
         ),
         "xgboost": (
-            Pipeline([("pre", preprocessor(pathology, scale=False, missing_indicators=missing_indicators)),
-                      ("clf", XGBClassifier(scale_pos_weight=pos_weight, eval_metric="logloss", n_jobs=-1, random_state=seed))]),
-            {"clf__n_estimators": randint(100, 500), "clf__max_depth": randint(2, 6), "clf__learning_rate": loguniform(0.01, 0.3),
-             "clf__subsample": uniform(0.6, 0.4), "clf__colsample_bytree": uniform(0.5, 0.5), "clf__reg_lambda": loguniform(0.1, 10)},
+            Pipeline([("pre", pre(False)), ("clf", MonotoneTreeClassifier(xgb, leading_constraints=cst))]),
+            {"clf__base__n_estimators": randint(100, 500), "clf__base__max_depth": randint(2, 6),
+             "clf__base__learning_rate": loguniform(0.01, 0.3), "clf__base__subsample": uniform(0.6, 0.4),
+             "clf__base__colsample_bytree": uniform(0.5, 0.5), "clf__base__reg_lambda": loguniform(0.1, 10)},
         ),
     }
 
 
 def train(df: pd.DataFrame, pathology: str, *, external_site: str | None = None, target_sensitivity: float = 0.95,
           target_specificity: float = 0.90, n_iter: int = 15, seed: int = 42, data_source: str = "inconnue",
-          models_dir: Path | None = None, activate: bool = True, missing_indicators: bool = True) -> dict:
+          models_dir: Path | None = None, activate: bool = True, missing_indicators: bool = True,
+          monotone: bool = True) -> dict:
     df, data_report = prepare(df, pathology)
 
     external = None
@@ -137,7 +144,7 @@ def train(df: pd.DataFrame, pathology: str, *, external_site: str | None = None,
     scoring = {"pr_auc": "average_precision", "roc_auc": "roc_auc", "brier": "neg_brier_score"}
 
     comparison, searches = {}, {}
-    for name, (pipe, params) in candidates(pathology, pos_weight, seed, missing_indicators).items():
+    for name, (pipe, params) in candidates(pathology, pos_weight, seed, missing_indicators, monotone).items():
         search = RandomizedSearchCV(pipe, params, n_iter=n_iter, scoring=scoring, refit="pr_auc", cv=splits,
                                     random_state=seed, n_jobs=1)
         search.fit(X_tr, y_tr)
@@ -146,7 +153,8 @@ def train(df: pd.DataFrame, pathology: str, *, external_site: str | None = None,
         comparison[name] = {
             "pr_auc_cv": round(float(res["mean_test_pr_auc"][i]), 4), "pr_auc_cv_std": round(float(res["std_test_pr_auc"][i]), 4),
             "roc_auc_cv": round(float(res["mean_test_roc_auc"][i]), 4), "brier_cv": round(float(-res["mean_test_brier"][i]), 4),
-            "hyperparametres": {k.replace("clf__", ""): (v.item() if hasattr(v, "item") else v) for k, v in search.best_params_.items()},
+            "hyperparametres": {k.replace("clf__base__", "").replace("clf__", ""): (v.item() if hasattr(v, "item") else v)
+                                for k, v in search.best_params_.items()},
         }
         searches[name] = search
         print(f"  {name:<20} PR-AUC={comparison[name]['pr_auc_cv']:.3f}  ROC-AUC={comparison[name]['roc_auc_cv']:.3f}")
@@ -195,6 +203,7 @@ def train(df: pd.DataFrame, pathology: str, *, external_site: str | None = None,
                   "apprentissage": int(len(tr)), "test": int(len(te)), "externe": int(len(external)) if external is not None else 0},
         "calibration": method,
         "missing_indicators": missing_indicators,
+        "monotone_constraints": monotone_features(pathology) if monotone else {},
         "threshold_policy": {"sensibilite_cible_moyen": target_sensitivity, "specificite_cible_eleve": target_specificity},
         "thresholds": thresholds,
         "comparison": comparison,
@@ -276,6 +285,8 @@ def main() -> None:
     parser.add_argument("--target-specificity", type=float, default=0.90)
     parser.add_argument("--n-iter", type=int, default=15, help="Itérations de la recherche d'hyperparamètres")
     parser.add_argument("--no-activate", action="store_true", help="Ne pas déployer cette version")
+    parser.add_argument("--no-monotone", action="store_true",
+                        help="Désactiver les contraintes de monotonie cliniques (déconseillé, pour comparaison uniquement)")
     parser.add_argument("--no-missing-indicators", action="store_true",
                         help="Ne pas créer d'indicatrices de manque (si le manque est un artefact du jeu source)")
     args = parser.parse_args()
@@ -283,7 +294,7 @@ def main() -> None:
     meta = train(pd.read_csv(args.data), args.pathology, external_site=args.external_site,
                  target_sensitivity=args.target_sensitivity, target_specificity=args.target_specificity,
                  n_iter=args.n_iter, data_source=source, activate=not args.no_activate,
-                 missing_indicators=not args.no_missing_indicators)
+                 missing_indicators=not args.no_missing_indicators, monotone=not args.no_monotone)
     print(json.dumps(meta["evaluation"]["test"]["orientation_moyen_ou_plus"], indent=2, ensure_ascii=False))
 
 

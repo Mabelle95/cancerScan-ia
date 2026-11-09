@@ -84,6 +84,7 @@ def explain(model: LoadedModel, X, top: int = 5, raw: dict | None = None) -> lis
     """
     pre = model.explainer_model.named_steps["pre"]
     clf = model.explainer_model.named_steps["clf"]
+    clf = getattr(clf, "estimator_", clf)  # modèles d'arbres sous contrainte de monotonie : estimateur interne
     Xt = pre.transform(X)
     names = pre.get_feature_names_out()
     algo = model.metadata["algorithm"]
@@ -106,6 +107,9 @@ def explain(model: LoadedModel, X, top: int = 5, raw: dict | None = None) -> lis
         src = source_feature(name, pathology)
         by_feature[src] = by_feature.get(src, 0.0) + float(c)
     labels = {s.name: s.label for s in feature_specs(pathology)}
+    if raw is not None:
+        # Une réponse non renseignée n'est pas un « facteur » : l'afficher (« non renseigné → diminue ») rassurerait à tort.
+        by_feature = {f: c for f, c in by_feature.items() if raw.get(f) not in (None, "", "inconnu")}
     ranked = sorted(by_feature.items(), key=lambda kv: abs(kv[1]), reverse=True)
     return [
         # « value » : la réponse saisie, affichée à côté du facteur pour qu'une contribution ne soit jamais

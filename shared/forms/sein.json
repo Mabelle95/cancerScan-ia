@@ -1,30 +1,143 @@
 {
   "pathology": "sein",
   "title": "Dépistage du cancer du sein",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "validated": false,
+  "age_monotone": "increasing",
   "sections": [
     {
       "id": "antecedents",
       "title": "Identification & antécédents",
       "icon": "person",
       "fields": [
-        {"id": "atcd_familial_sein_ovaire", "label": "Cancer du sein ou de l'ovaire dans la famille (mère, sœur, tante…)", "type": "boolean", "required": true, "ml": true},
-        {"id": "atcd_familial_degre", "label": "Lien de parenté le plus proche", "type": "choice", "ml": true,
-         "show_if": {"field": "atcd_familial_sein_ovaire", "equals": true},
-         "options": [{"value": "premier", "label": "1er degré (mère, sœur, fille)"}, {"value": "second", "label": "2e degré (tante, grand-mère…)"}, {"value": "inconnu", "label": "Inconnu"}]},
-        {"id": "atcd_autres_cancers", "label": "Autres cancers dans la famille", "type": "boolean"},
-        {"id": "atcd_personnel_sein", "label": "Antécédent personnel de cancer ou de lésion du sein", "type": "boolean", "required": true, "ml": true},
-        {"id": "age_premieres_regles", "label": "Âge aux premières règles", "type": "integer", "min": 7, "max": 25, "unit": "ans", "ml": true},
-        {"id": "nb_grossesses_terme", "label": "Nombre de grossesses menées à terme", "type": "integer", "min": 0, "max": 20, "ml": true},
-        {"id": "age_premiere_grossesse", "label": "Âge à la première grossesse menée à terme", "type": "integer", "min": 10, "max": 55, "unit": "ans", "ml": true,
-         "show_if": {"field": "nb_grossesses_terme", "greater_than": 0}},
-        {"id": "allaitement", "label": "Allaitement (durée cumulée)", "type": "choice", "ml": true,
-         "options": [{"value": "jamais", "label": "Jamais"}, {"value": "moins_12_mois", "label": "Moins de 12 mois"}, {"value": "12_mois_plus", "label": "12 mois ou plus"}]},
-        {"id": "menopause", "label": "Ménopausée", "type": "boolean", "ml": true},
-        {"id": "traitement_hormonal", "label": "Traitement hormonal prolongé (contraception ou THS)", "type": "boolean", "ml": true},
-        {"id": "alcool", "label": "Consommation d'alcool", "type": "choice", "ml": true,
-         "options": [{"value": "non", "label": "Non"}, {"value": "occasionnelle", "label": "Occasionnelle"}, {"value": "reguliere", "label": "Régulière"}]}
+        {
+          "id": "atcd_familial_sein_ovaire",
+          "label": "Cancer du sein ou de l'ovaire dans la famille (mère, sœur, tante…)",
+          "type": "boolean",
+          "required": true,
+          "ml": true,
+          "monotone": "increasing"
+        },
+        {
+          "id": "atcd_familial_degre",
+          "label": "Lien de parenté le plus proche",
+          "type": "choice",
+          "ml": true,
+          "show_if": {
+            "field": "atcd_familial_sein_ovaire",
+            "equals": true
+          },
+          "options": [
+            {
+              "value": "premier",
+              "label": "1er degré (mère, sœur, fille)"
+            },
+            {
+              "value": "second",
+              "label": "2e degré (tante, grand-mère…)"
+            },
+            {
+              "value": "inconnu",
+              "label": "Inconnu"
+            }
+          ]
+        },
+        {
+          "id": "atcd_autres_cancers",
+          "label": "Autres cancers dans la famille",
+          "type": "boolean"
+        },
+        {
+          "id": "atcd_personnel_sein",
+          "label": "Antécédent personnel de cancer ou de lésion du sein",
+          "type": "boolean",
+          "required": true,
+          "ml": true,
+          "monotone": "increasing"
+        },
+        {
+          "id": "age_premieres_regles",
+          "label": "Âge aux premières règles",
+          "type": "integer",
+          "min": 7,
+          "max": 25,
+          "unit": "ans",
+          "ml": true
+        },
+        {
+          "id": "nb_grossesses_terme",
+          "label": "Nombre de grossesses menées à terme",
+          "type": "integer",
+          "min": 0,
+          "max": 20,
+          "ml": true
+        },
+        {
+          "id": "age_premiere_grossesse",
+          "label": "Âge à la première grossesse menée à terme",
+          "type": "integer",
+          "min": 10,
+          "max": 55,
+          "unit": "ans",
+          "ml": true,
+          "show_if": {
+            "field": "nb_grossesses_terme",
+            "greater_than": 0
+          }
+        },
+        {
+          "id": "allaitement",
+          "label": "Allaitement (durée cumulée)",
+          "type": "choice",
+          "ml": true,
+          "options": [
+            {
+              "value": "jamais",
+              "label": "Jamais"
+            },
+            {
+              "value": "moins_12_mois",
+              "label": "Moins de 12 mois"
+            },
+            {
+              "value": "12_mois_plus",
+              "label": "12 mois ou plus"
+            }
+          ]
+        },
+        {
+          "id": "menopause",
+          "label": "Ménopausée",
+          "type": "boolean",
+          "ml": true
+        },
+        {
+          "id": "traitement_hormonal",
+          "label": "Traitement hormonal prolongé (contraception ou THS)",
+          "type": "boolean",
+          "ml": true,
+          "monotone": "increasing"
+        },
+        {
+          "id": "alcool",
+          "label": "Consommation d'alcool",
+          "type": "choice",
+          "ml": true,
+          "options": [
+            {
+              "value": "non",
+              "label": "Non"
+            },
+            {
+              "value": "occasionnelle",
+              "label": "Occasionnelle"
+            },
+            {
+              "value": "reguliere",
+              "label": "Régulière"
+            }
+          ]
+        }
       ]
     },
     {
@@ -32,25 +145,180 @@
       "title": "Symptômes actuels",
       "icon": "symptoms",
       "fields": [
-        {"id": "masse_presente", "label": "Masse ou nodule perçu dans le sein", "type": "boolean", "required": true, "ml": true, "alert_when": true},
-        {"id": "masse_duree_semaines", "label": "Depuis combien de temps", "type": "integer", "min": 0, "max": 520, "unit": "semaines",
-         "show_if": {"field": "masse_presente", "equals": true}},
-        {"id": "masse_cote", "label": "Côté", "type": "choice", "show_if": {"field": "masse_presente", "equals": true},
-         "options": [{"value": "gauche", "label": "Gauche"}, {"value": "droit", "label": "Droit"}, {"value": "bilateral", "label": "Les deux"}]},
-        {"id": "masse_localisation", "label": "Localisation", "type": "choice", "show_if": {"field": "masse_presente", "equals": true},
-         "options": [{"value": "qse", "label": "Haut, côté aisselle (QSE)"}, {"value": "qsi", "label": "Haut, côté intérieur (QSI)"}, {"value": "qie", "label": "Bas, côté aisselle (QIE)"}, {"value": "qii", "label": "Bas, côté intérieur (QII)"}, {"value": "centrale", "label": "Derrière le mamelon"}]},
-        {"id": "masse_multiplicite", "label": "Multiplicité", "type": "choice", "show_if": {"field": "masse_presente", "equals": true},
-         "options": [{"value": "unique", "label": "Unique"}, {"value": "multiple", "label": "Multiple"}]},
-        {"id": "masse_taille_cm", "label": "Taille approximative", "type": "number", "min": 0, "max": 30, "unit": "cm", "ml": true,
-         "show_if": {"field": "masse_presente", "equals": true}},
-        {"id": "masse_variation_cycle", "label": "Varie avec le cycle menstruel", "type": "boolean",
-         "show_if": {"field": "masse_presente", "equals": true}},
-        {"id": "douleur_sein", "label": "Douleurs mammaires", "type": "boolean", "ml": true},
-        {"id": "ecoulement", "label": "Écoulement par le mamelon", "type": "choice", "ml": true,
-         "options": [{"value": "aucun", "label": "Aucun"}, {"value": "clair", "label": "Clair / laiteux"}, {"value": "non_precise", "label": "Oui, type non précisé"}, {"value": "sanglant", "label": "Sanglant", "alert": true}]},
-        {"id": "modif_peau", "label": "Modification de la peau du sein (rougeur, peau d'orange, plaie)", "type": "boolean", "required": true, "ml": true, "alert_when": true},
-        {"id": "retraction_mamelon", "label": "Mamelon rentré récemment", "type": "boolean", "required": true, "ml": true, "alert_when": true},
-        {"id": "ganglion_axillaire", "label": "Boule sous l'aisselle", "type": "boolean", "ml": true, "alert_when": true}
+        {
+          "id": "masse_presente",
+          "label": "Masse ou nodule perçu dans le sein",
+          "type": "boolean",
+          "required": true,
+          "ml": true,
+          "alert_when": true,
+          "monotone": "increasing"
+        },
+        {
+          "id": "masse_duree_semaines",
+          "label": "Depuis combien de temps",
+          "type": "integer",
+          "min": 0,
+          "max": 520,
+          "unit": "semaines",
+          "show_if": {
+            "field": "masse_presente",
+            "equals": true
+          }
+        },
+        {
+          "id": "masse_cote",
+          "label": "Côté",
+          "type": "choice",
+          "show_if": {
+            "field": "masse_presente",
+            "equals": true
+          },
+          "options": [
+            {
+              "value": "gauche",
+              "label": "Gauche"
+            },
+            {
+              "value": "droit",
+              "label": "Droit"
+            },
+            {
+              "value": "bilateral",
+              "label": "Les deux"
+            }
+          ]
+        },
+        {
+          "id": "masse_localisation",
+          "label": "Localisation",
+          "type": "choice",
+          "show_if": {
+            "field": "masse_presente",
+            "equals": true
+          },
+          "options": [
+            {
+              "value": "qse",
+              "label": "Haut, côté aisselle (QSE)"
+            },
+            {
+              "value": "qsi",
+              "label": "Haut, côté intérieur (QSI)"
+            },
+            {
+              "value": "qie",
+              "label": "Bas, côté aisselle (QIE)"
+            },
+            {
+              "value": "qii",
+              "label": "Bas, côté intérieur (QII)"
+            },
+            {
+              "value": "centrale",
+              "label": "Derrière le mamelon"
+            }
+          ]
+        },
+        {
+          "id": "masse_multiplicite",
+          "label": "Multiplicité",
+          "type": "choice",
+          "show_if": {
+            "field": "masse_presente",
+            "equals": true
+          },
+          "options": [
+            {
+              "value": "unique",
+              "label": "Unique"
+            },
+            {
+              "value": "multiple",
+              "label": "Multiple"
+            }
+          ]
+        },
+        {
+          "id": "masse_taille_cm",
+          "label": "Taille approximative",
+          "type": "number",
+          "min": 0,
+          "max": 30,
+          "unit": "cm",
+          "ml": true,
+          "show_if": {
+            "field": "masse_presente",
+            "equals": true
+          },
+          "monotone": "increasing"
+        },
+        {
+          "id": "masse_variation_cycle",
+          "label": "Varie avec le cycle menstruel",
+          "type": "boolean",
+          "show_if": {
+            "field": "masse_presente",
+            "equals": true
+          }
+        },
+        {
+          "id": "douleur_sein",
+          "label": "Douleurs mammaires",
+          "type": "boolean",
+          "ml": true
+        },
+        {
+          "id": "ecoulement",
+          "label": "Écoulement par le mamelon",
+          "type": "choice",
+          "ml": true,
+          "options": [
+            {
+              "value": "aucun",
+              "label": "Aucun"
+            },
+            {
+              "value": "clair",
+              "label": "Clair / laiteux"
+            },
+            {
+              "value": "non_precise",
+              "label": "Oui, type non précisé"
+            },
+            {
+              "value": "sanglant",
+              "label": "Sanglant",
+              "alert": true
+            }
+          ]
+        },
+        {
+          "id": "modif_peau",
+          "label": "Modification de la peau du sein (rougeur, peau d'orange, plaie)",
+          "type": "boolean",
+          "required": true,
+          "ml": true,
+          "alert_when": true,
+          "monotone": "increasing"
+        },
+        {
+          "id": "retraction_mamelon",
+          "label": "Mamelon rentré récemment",
+          "type": "boolean",
+          "required": true,
+          "ml": true,
+          "alert_when": true,
+          "monotone": "increasing"
+        },
+        {
+          "id": "ganglion_axillaire",
+          "label": "Boule sous l'aisselle",
+          "type": "boolean",
+          "ml": true,
+          "alert_when": true,
+          "monotone": "increasing"
+        }
       ]
     },
     {
@@ -58,29 +326,190 @@
       "title": "Examen clinique",
       "icon": "exam",
       "fields": [
-        {"id": "examen_realise", "label": "Examen clinique des seins réalisé", "type": "boolean", "required": true},
-        {"id": "peau_orange", "label": "Peau d'orange", "type": "boolean", "alert_when": true, "show_if": {"field": "examen_realise", "equals": true}},
-        {"id": "retraction_cutanee", "label": "Rétraction cutanée", "type": "boolean", "alert_when": true, "show_if": {"field": "examen_realise", "equals": true}},
-        {"id": "deviation_mamelon", "label": "Déviation du mamelon", "type": "boolean", "show_if": {"field": "examen_realise", "equals": true}},
-        {"id": "ulceration", "label": "Ulcération", "type": "boolean", "alert_when": true, "show_if": {"field": "examen_realise", "equals": true}},
-        {"id": "rougeur_oedeme", "label": "Rougeur / œdème", "type": "boolean", "alert_when": true, "show_if": {"field": "examen_realise", "equals": true}},
-        {"id": "masse_consistance", "label": "Consistance de la masse", "type": "choice", "ml": true,
-         "show_if": {"field": "examen_realise", "equals": true},
-         "options": [{"value": "sans_objet", "label": "Pas de masse"}, {"value": "molle", "label": "Molle"}, {"value": "ferme", "label": "Ferme"}, {"value": "dure", "label": "Dure", "alert": true}]},
-        {"id": "masse_limites", "label": "Limites de la masse", "type": "choice",
-         "show_if": {"field": "examen_realise", "equals": true},
-         "options": [{"value": "sans_objet", "label": "Pas de masse"}, {"value": "nettes", "label": "Nettes"}, {"value": "irregulieres", "label": "Irrégulières", "alert": true}]},
-        {"id": "masse_mobilite", "label": "Mobilité de la masse", "type": "choice", "ml": true,
-         "show_if": {"field": "examen_realise", "equals": true},
-         "options": [{"value": "sans_objet", "label": "Pas de masse"}, {"value": "mobile", "label": "Mobile"}, {"value": "fixee", "label": "Fixée", "alert": true}]},
-        {"id": "douleur_palpation", "label": "Douleur à la palpation", "type": "boolean", "show_if": {"field": "examen_realise", "equals": true}},
-        {"id": "adenopathie_examen", "label": "Ganglions axillaires suspects", "type": "boolean", "ml": true, "alert_when": true,
-         "show_if": {"field": "examen_realise", "equals": true}},
-        {"id": "ganglions_sus_claviculaires", "label": "Ganglions sus-claviculaires", "type": "boolean", "alert_when": true,
-         "show_if": {"field": "examen_realise", "equals": true}},
-        {"id": "ganglions_mobilite", "label": "Mobilité des ganglions", "type": "choice",
-         "show_if": {"field": "adenopathie_examen", "equals": true},
-         "options": [{"value": "mobiles", "label": "Mobiles"}, {"value": "fixes", "label": "Fixés", "alert": true}]}
+        {
+          "id": "examen_realise",
+          "label": "Examen clinique des seins réalisé",
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "id": "peau_orange",
+          "label": "Peau d'orange",
+          "type": "boolean",
+          "alert_when": true,
+          "show_if": {
+            "field": "examen_realise",
+            "equals": true
+          }
+        },
+        {
+          "id": "retraction_cutanee",
+          "label": "Rétraction cutanée",
+          "type": "boolean",
+          "alert_when": true,
+          "show_if": {
+            "field": "examen_realise",
+            "equals": true
+          }
+        },
+        {
+          "id": "deviation_mamelon",
+          "label": "Déviation du mamelon",
+          "type": "boolean",
+          "show_if": {
+            "field": "examen_realise",
+            "equals": true
+          }
+        },
+        {
+          "id": "ulceration",
+          "label": "Ulcération",
+          "type": "boolean",
+          "alert_when": true,
+          "show_if": {
+            "field": "examen_realise",
+            "equals": true
+          }
+        },
+        {
+          "id": "rougeur_oedeme",
+          "label": "Rougeur / œdème",
+          "type": "boolean",
+          "alert_when": true,
+          "show_if": {
+            "field": "examen_realise",
+            "equals": true
+          }
+        },
+        {
+          "id": "masse_consistance",
+          "label": "Consistance de la masse",
+          "type": "choice",
+          "ml": true,
+          "show_if": {
+            "field": "examen_realise",
+            "equals": true
+          },
+          "options": [
+            {
+              "value": "sans_objet",
+              "label": "Pas de masse"
+            },
+            {
+              "value": "molle",
+              "label": "Molle"
+            },
+            {
+              "value": "ferme",
+              "label": "Ferme"
+            },
+            {
+              "value": "dure",
+              "label": "Dure",
+              "alert": true
+            }
+          ]
+        },
+        {
+          "id": "masse_limites",
+          "label": "Limites de la masse",
+          "type": "choice",
+          "show_if": {
+            "field": "examen_realise",
+            "equals": true
+          },
+          "options": [
+            {
+              "value": "sans_objet",
+              "label": "Pas de masse"
+            },
+            {
+              "value": "nettes",
+              "label": "Nettes"
+            },
+            {
+              "value": "irregulieres",
+              "label": "Irrégulières",
+              "alert": true
+            }
+          ]
+        },
+        {
+          "id": "masse_mobilite",
+          "label": "Mobilité de la masse",
+          "type": "choice",
+          "ml": true,
+          "show_if": {
+            "field": "examen_realise",
+            "equals": true
+          },
+          "options": [
+            {
+              "value": "sans_objet",
+              "label": "Pas de masse"
+            },
+            {
+              "value": "mobile",
+              "label": "Mobile"
+            },
+            {
+              "value": "fixee",
+              "label": "Fixée",
+              "alert": true
+            }
+          ]
+        },
+        {
+          "id": "douleur_palpation",
+          "label": "Douleur à la palpation",
+          "type": "boolean",
+          "show_if": {
+            "field": "examen_realise",
+            "equals": true
+          }
+        },
+        {
+          "id": "adenopathie_examen",
+          "label": "Ganglions axillaires suspects",
+          "type": "boolean",
+          "ml": true,
+          "alert_when": true,
+          "show_if": {
+            "field": "examen_realise",
+            "equals": true
+          },
+          "monotone": "increasing"
+        },
+        {
+          "id": "ganglions_sus_claviculaires",
+          "label": "Ganglions sus-claviculaires",
+          "type": "boolean",
+          "alert_when": true,
+          "show_if": {
+            "field": "examen_realise",
+            "equals": true
+          }
+        },
+        {
+          "id": "ganglions_mobilite",
+          "label": "Mobilité des ganglions",
+          "type": "choice",
+          "show_if": {
+            "field": "adenopathie_examen",
+            "equals": true
+          },
+          "options": [
+            {
+              "value": "mobiles",
+              "label": "Mobiles"
+            },
+            {
+              "value": "fixes",
+              "label": "Fixés",
+              "alert": true
+            }
+          ]
+        }
       ]
     },
     {
@@ -88,13 +517,72 @@
       "title": "Données complémentaires",
       "icon": "document",
       "fields": [
-        {"id": "acces_soins", "label": "Accès au centre de santé", "type": "choice",
-         "options": [{"value": "facile", "label": "Facile"}, {"value": "difficile", "label": "Difficile"}, {"value": "tres_difficile", "label": "Très difficile"}]},
-        {"id": "difficulte_acces", "label": "Difficultés rencontrées", "type": "multichoice",
-         "options": [{"value": "distance", "label": "Distance"}, {"value": "cout", "label": "Coût"}, {"value": "transport", "label": "Transport"}, {"value": "autre", "label": "Autre"}]},
-        {"id": "dernier_depistage", "label": "Dernier examen des seins", "type": "choice",
-         "options": [{"value": "jamais", "label": "Jamais"}, {"value": "moins_2_ans", "label": "Moins de 2 ans"}, {"value": "plus_2_ans", "label": "Plus de 2 ans"}]},
-        {"id": "observations", "label": "Observations", "type": "text"}
+        {
+          "id": "acces_soins",
+          "label": "Accès au centre de santé",
+          "type": "choice",
+          "options": [
+            {
+              "value": "facile",
+              "label": "Facile"
+            },
+            {
+              "value": "difficile",
+              "label": "Difficile"
+            },
+            {
+              "value": "tres_difficile",
+              "label": "Très difficile"
+            }
+          ]
+        },
+        {
+          "id": "difficulte_acces",
+          "label": "Difficultés rencontrées",
+          "type": "multichoice",
+          "options": [
+            {
+              "value": "distance",
+              "label": "Distance"
+            },
+            {
+              "value": "cout",
+              "label": "Coût"
+            },
+            {
+              "value": "transport",
+              "label": "Transport"
+            },
+            {
+              "value": "autre",
+              "label": "Autre"
+            }
+          ]
+        },
+        {
+          "id": "dernier_depistage",
+          "label": "Dernier examen des seins",
+          "type": "choice",
+          "options": [
+            {
+              "value": "jamais",
+              "label": "Jamais"
+            },
+            {
+              "value": "moins_2_ans",
+              "label": "Moins de 2 ans"
+            },
+            {
+              "value": "plus_2_ans",
+              "label": "Plus de 2 ans"
+            }
+          ]
+        },
+        {
+          "id": "observations",
+          "label": "Observations",
+          "type": "text"
+        }
       ]
     },
     {
@@ -102,10 +590,32 @@
       "title": "Résumé & validation",
       "icon": "check",
       "fields": [
-        {"id": "probabilite_enqueteur", "label": "Votre impression : probabilité de cancer", "type": "choice", "required": true,
-         "help": "Votre avis avant l'analyse IA. Il n'est pas transmis au modèle : il sert à comparer l'IA au jugement de l'agent.",
-         "options": [{"value": "faible", "label": "Faible"}, {"value": "moyenne", "label": "Moyenne"}, {"value": "elevee", "label": "Élevée"}]},
-        {"id": "conseils_donnes", "label": "Conseils donnés à la patiente", "type": "text"}
+        {
+          "id": "probabilite_enqueteur",
+          "label": "Votre impression : probabilité de cancer",
+          "type": "choice",
+          "required": true,
+          "help": "Votre avis avant l'analyse IA. Il n'est pas transmis au modèle : il sert à comparer l'IA au jugement de l'agent.",
+          "options": [
+            {
+              "value": "faible",
+              "label": "Faible"
+            },
+            {
+              "value": "moyenne",
+              "label": "Moyenne"
+            },
+            {
+              "value": "elevee",
+              "label": "Élevée"
+            }
+          ]
+        },
+        {
+          "id": "conseils_donnes",
+          "label": "Conseils donnés à la patiente",
+          "type": "text"
+        }
       ]
     }
   ]

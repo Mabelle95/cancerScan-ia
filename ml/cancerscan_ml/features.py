@@ -34,6 +34,11 @@ class FeatureSpec:
     kind: str  # numeric | boolean | categorical
     label: str
     categories: tuple[str, ...] = ()
+    # +1 : ne peut qu'augmenter le risque (déclaré « "monotone": "increasing" » dans le formulaire) ; 0 : libre
+    monotone: int = 0
+
+
+_MONOTONE = {"increasing": 1, "decreasing": -1}
 
 
 @lru_cache
@@ -47,20 +52,31 @@ def load_form(pathology: str) -> dict:
 @lru_cache
 def feature_specs(pathology: str) -> tuple[FeatureSpec, ...]:
     form = load_form(pathology)
-    specs = [FeatureSpec("age", "numeric", "Âge")]
+    # Le risque de ces cancers augmente avec l'âge : contrainte croissante sauf indication contraire du formulaire
+    specs = [FeatureSpec("age", "numeric", "Âge", monotone=_MONOTONE.get(form.get("age_monotone", "increasing"), 0))]
     for section in form["sections"]:
         for f in section["fields"]:
             if not f.get("ml"):
                 continue
+            mono = _MONOTONE.get(f.get("monotone", ""), 0)
             if f["type"] == "boolean":
-                specs.append(FeatureSpec(f["id"], "boolean", f["label"]))
+                specs.append(FeatureSpec(f["id"], "boolean", f["label"], monotone=mono))
             elif f["type"] in ("integer", "number"):
-                specs.append(FeatureSpec(f["id"], "numeric", f["label"]))
+                specs.append(FeatureSpec(f["id"], "numeric", f["label"], monotone=mono))
             elif f["type"] == "choice":
                 specs.append(FeatureSpec(f["id"], "categorical", f["label"], tuple(o["value"] for o in f["options"])))
             else:
                 raise ValueError(f"Type non pris en charge pour une variable ML : {f['id']} ({f['type']})")
     return tuple(specs)
+
+
+def leading_constraints(pathology: str) -> tuple[int, ...]:
+    """Contraintes des colonnes numériques/booléennes, dans l'ordre où `preprocessor` les place (en premier)."""
+    return tuple(s.monotone for s in feature_specs(pathology) if s.kind in ("numeric", "boolean"))
+
+
+def monotone_features(pathology: str) -> dict[str, str]:
+    return {s.name: ("croissant" if s.monotone > 0 else "décroissant") for s in feature_specs(pathology) if s.monotone}
 
 
 def form_version(pathology: str) -> str:
