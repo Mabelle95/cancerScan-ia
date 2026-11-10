@@ -142,6 +142,9 @@ class SyncService {
       'final_decision': ref?['final_decision'],
       'referral_status': ref?['status'],
       'appointment_date': ref?['appointment_date'],
+      // Structures spécialisées les plus proches (risque moyen ou élevé), pour orienter la patiente
+      'suggested_facilities': [for (final f in (ref?['suggested_facilities'] as List? ?? [])) f],
+      'to_facility_id': ref?['to_facility_id'],
     };
   }
 }

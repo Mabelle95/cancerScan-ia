@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.models import (
     ErrorEvent, Patient, Pathology, Referral, ReferralStatus, RiskAssessment, RiskLevel, Screening, ScreeningStatus, User, utcnow,
 )
-from app.services import engine_client, orientation
+from app.services import directory, engine_client, orientation
 from app.services.audit import audit
 from app.services.forms import check_form, ml_features
 
@@ -34,6 +34,15 @@ def _upsert_referral(db: Session, screening: Screening, level: RiskLevel | None,
     if referral.final_decision is None:
         referral.proposed_level = level
         referral.proposed_recommendation = text
+        # Risque moyen ou élevé : on propose les structures spécialisées les plus proches de la patiente
+        if level in directory.REFERRAL_LEVELS:
+            origin = screening.patient.facility if screening.patient else None
+            suggestions = directory.nearest_specialists(db, Pathology(screening.pathology), origin)
+            referral.suggested_facilities = suggestions
+            referral.proposed_facility_id = suggestions[0]["facility_id"] if suggestions else None
+        else:
+            referral.suggested_facilities = []
+            referral.proposed_facility_id = None
 
 
 def run_analysis(db: Session, screening: Screening, user: User) -> RiskAssessment | None:

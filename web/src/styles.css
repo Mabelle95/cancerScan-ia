@@ -291,3 +291,16 @@ tr.clickable:hover td { background: var(--primary-soft); }
 .spinner { padding: 36px; text-align: center; color: var(--text-muted); }
 .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 900px) { .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* --- Orientation : structures spécialisées les plus proches --------------------- */
+.places { margin-top: 14px; }
+.places h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; }
+.place { border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; background: var(--surface, #fff); }
+.place-first { border-color: var(--primary); border-width: 1.5px; background: var(--info-soft); }
+.place-first.place-urgent { border-color: var(--risk-eleve); background: color-mix(in srgb, var(--risk-eleve) 7%, transparent); }
+.place-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.place-tag { font-size: 11.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--primary); margin-bottom: 2px; }
+.place-urgent .place-tag { color: var(--risk-eleve); }
+.place-km { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-weight: 700; font-size: 13px;
+  color: var(--primary); background: var(--info-soft); border-radius: 999px; padding: 4px 10px; }
+.place .btn { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }

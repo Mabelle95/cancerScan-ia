@@ -62,7 +62,7 @@ def test_identifying_data_encrypted_at_rest(client, login):
     assert p["patient"]["full_name"] == "Afi Mensah"
     with SessionLocal() as db:
         raw = db.execute(text("SELECT full_name, phone FROM patients")).one()
-    assert "Afi" not in raw[0] and "90" not in raw[1]
+    assert "Afi" not in raw[0] and "90 00 00 01" not in raw[1] and "90000001" not in raw[1]
 
 
 def test_duplicate_detection_by_phone_and_search(client, login):

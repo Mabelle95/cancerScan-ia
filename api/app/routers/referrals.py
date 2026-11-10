@@ -3,7 +3,7 @@
 from datetime import date, timedelta
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
-from sqlalchemy import case, select
+from sqlalchemy import case, or_, select
 
 from app.core.permissions import Perm
 from app.deps import DbSession, require
@@ -57,7 +57,10 @@ def list_referrals(
     if status_:
         q = q.where(Referral.status == status_)
     if direction == "incoming":
-        q = q.where(Referral.to_facility_id == user.facility_id)
+        q = q.where(or_(
+            Referral.to_facility_id == user.facility_id,
+            (Referral.to_facility_id.is_(None)) & (Referral.proposed_facility_id == user.facility_id),
+        ))
     elif direction == "outgoing":
         q = q.where(Patient.facility_id == user.facility_id)
     if pending_decision:

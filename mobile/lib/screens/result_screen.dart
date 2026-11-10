@@ -9,6 +9,7 @@ import '../core/form_logic.dart';
 import '../core/local_store.dart';
 import '../theme.dart';
 import '../widgets/form_renderer.dart';
+import '../widgets/referral_places.dart';
 import '../widgets/ui.dart';
 import 'wizard_screen.dart';
 
@@ -237,6 +238,14 @@ class _ResultScreenState extends State<ResultScreen> {
 
           // --- Orientation ---------------------------------------------------------------
           _OrientationCard(level: analysed ? res['proposed_level'] as String? : (alerts.isNotEmpty ? 'moyen' : null), result: res, pending: !analysed),
+
+          // --- Où orienter la patiente : structures spécialisées les plus proches ----------
+          if (analysed && (res['suggested_facilities'] as List? ?? []).isNotEmpty)
+            ReferralPlacesCard(
+              level: res['proposed_level'] as String?,
+              places: [for (final f in res['suggested_facilities'] as List) Map<String, dynamic>.from(f as Map)],
+              chosenId: res['to_facility_id'] as int?,
+            ),
 
           // --- Appréciation de l'agent : seulement APRÈS le résultat de l'IA ---------------
           if (analysed && r.serverId != null && app.forms[r.pathology] != null) ...[

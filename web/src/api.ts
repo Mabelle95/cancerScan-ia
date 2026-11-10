@@ -33,6 +33,27 @@ export interface Facility {
   district: string | null;
   level: string | null;
   is_active: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  address: string | null;
+  phone: string | null;
+  services: string[];
+}
+
+/** Structure spécialisée proposée automatiquement (risque moyen ou élevé), la plus proche en premier. */
+export interface SuggestedFacility {
+  facility_id: number;
+  name: string;
+  level: string | null;
+  region: string;
+  district: string | null;
+  address: string | null;
+  phone: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  distance_km: number | null;
+  services: string[];
+  same_facility: boolean;
 }
 
 export interface FormOption { value: string; label: string; alert?: boolean }
@@ -95,6 +116,8 @@ export interface Referral {
   decided_by_id: number | null;
   decided_at: string | null;
   to_facility_id: number | null;
+  proposed_facility_id: number | null;
+  suggested_facilities: SuggestedFacility[];
   reason: string | null;
   appointment_date: string | null;
   status: ReferralStatus;
@@ -297,6 +320,7 @@ export const api = {
   referralStatus: (id: number, status: ReferralStatus, appointment_date?: string) =>
     request<Referral>("PATCH", `/referrals/${id}/status`, { status, appointment_date }),
 
+  facilityServices: () => request<Record<string, string>>("GET", "/facilities/services"),
   facilities: (activeOnly = true) => request<Facility[]>("GET", "/facilities", undefined, { active_only: activeOnly ? "true" : "false" }),
   createFacility: (body: Omit<Facility, "id">) => request<Facility>("POST", "/facilities", body),
   updateFacility: (id: number, body: Omit<Facility, "id">) => request<Facility>("PUT", `/facilities/${id}`, body),

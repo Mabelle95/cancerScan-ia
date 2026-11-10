@@ -9,6 +9,7 @@ from app.core.permissions import Perm
 from app.core.security import hash_password, password_problem
 from app.deps import CurrentUser, DbSession, require
 from app.models import AuditLog, Facility, User, utcnow
+from app.services.directory import SERVICES
 from app.schemas import AuditOut, FacilityIn, FacilityOut, UserCreate, UserOut, UserUpdate
 from app.services import engine_client
 from app.services.audit import audit
@@ -26,6 +27,12 @@ def list_facilities(db: DbSession, _: CurrentUser, region: str | None = None, ac
     if active_only:
         q = q.where(Facility.is_active.is_(True))
     return db.scalars(q).all()
+
+
+@router.get("/facilities/services")
+def list_services(_: CurrentUser) -> dict[str, str]:
+    """Services spécialisés qu'un établissement peut déclarer (annuaire d'orientation)."""
+    return SERVICES
 
 
 @router.post("/facilities", response_model=FacilityOut, status_code=201)

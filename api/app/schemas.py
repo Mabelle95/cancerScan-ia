@@ -40,6 +40,20 @@ class FacilityIn(BaseModel):
     district: str | None = None
     level: str | None = None
     is_active: bool = True
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+    address: str | None = Field(default=None, max_length=255)
+    phone: str | None = Field(default=None, max_length=50)
+    services: list[str] = []
+
+    @field_validator("services")
+    @classmethod
+    def _known_services(cls, v: list[str]) -> list[str]:
+        from app.services.directory import SERVICES
+        unknown = [s for s in v if s not in SERVICES]
+        if unknown:
+            raise ValueError(f"Service(s) inconnu(s) : {', '.join(unknown)}")
+        return list(dict.fromkeys(v))
 
 
 class FacilityOut(FacilityIn, ORM):
@@ -173,6 +187,8 @@ class ReferralOut(ORM):
     decided_by_id: int | None
     decided_at: datetime | None
     to_facility_id: int | None
+    proposed_facility_id: int | None = None
+    suggested_facilities: list[dict] = []
     reason: str | None
     appointment_date: date | None
     status: ReferralStatus

@@ -110,7 +110,10 @@ function UserForm({ facilities, onDone }: { facilities: Facility[]; onDone: () =
 
 // --- Établissements ----------------------------------------------------------------
 
-const EMPTY_FACILITY: Omit<Facility, "id"> = { code: "", name: "", region: "Maritime", district: "", level: "", is_active: true };
+const EMPTY_FACILITY: Omit<Facility, "id"> = {
+  code: "", name: "", region: "Maritime", district: "", level: "", is_active: true,
+  latitude: null, longitude: null, address: "", phone: "", services: [],
+};
 
 export function Facilities() {
   const list = useAsync(() => api.facilities(false), []);
@@ -129,7 +132,11 @@ export function Facilities() {
       setError((err as Error).message);
     }
   };
-  const set = (k: string, v: string | boolean) => setEditing(editing && { ...editing, [k]: v });
+  const set = (k: string, v: string | boolean | number | null | string[]) => setEditing(editing && { ...editing, [k]: v });
+  const services = useAsync(() => api.facilityServices(), []);
+  const coord = (v: string) => (v.trim() === "" ? null : Number(v.replace(",", ".")));
+  const toggleService = (s: string) =>
+    editing && set("services", editing.services.includes(s) ? editing.services.filter((x) => x !== s) : [...editing.services, s]);
 
   return (
     <>
@@ -151,7 +158,21 @@ export function Facilities() {
               <select value={editing.level ?? ""} onChange={(e) => set("level", e.target.value)}>
                 <option value="">—</option>{["USP", "CMS", "CHP", "CHR", "CHU"].map((l) => <option key={l}>{l}</option>)}
               </select></label>
+            <label className="field"><span className="field-label">Téléphone</span><input type="tel" value={editing.phone ?? ""} onChange={(e) => set("phone", e.target.value)} /></label>
+            <label className="field"><span className="field-label">Adresse</span><input type="text" value={editing.address ?? ""} onChange={(e) => set("address", e.target.value)} /></label>
+            <label className="field"><span className="field-label">Latitude</span><input type="text" inputMode="decimal" placeholder="ex. 6.1319" value={editing.latitude ?? ""} onChange={(e) => set("latitude", coord(e.target.value))} /></label>
+            <label className="field"><span className="field-label">Longitude</span><input type="text" inputMode="decimal" placeholder="ex. 1.2228" value={editing.longitude ?? ""} onChange={(e) => set("longitude", coord(e.target.value))} />
+              <span className="field-help">Position GPS : sert à proposer la structure spécialisée la plus proche des patientes.</span></label>
             <label className="field checks"><span className="row"><input type="checkbox" checked={editing.is_active} onChange={(e) => set("is_active", e.target.checked)} /> Actif</span></label>
+          </div>
+          <div className="field">
+            <span className="field-label">Services spécialisés proposés</span>
+            <div className="chips">
+              {Object.entries(services.data ?? {}).map(([key, label]) => (
+                <button key={key} type="button" className="chip" aria-pressed={editing.services.includes(key)} onClick={() => toggleService(key)}>{label}</button>
+              ))}
+            </div>
+            <span className="field-help">Une structure n'est proposée pour l'orientation que si elle offre une consultation spécialisée. Tenez cette liste à jour.</span>
           </div>
           <div className="row"><button className="btn btn-primary">Enregistrer</button><button type="button" className="btn" onClick={() => setEditing(null)}>Annuler</button></div>
         </form>
@@ -159,13 +180,14 @@ export function Facilities() {
       {list.loading ? <Loading /> : (
         <div className="card table-wrap" style={{ padding: 0 }}>
           <table>
-            <thead><tr><th>Code</th><th>Nom</th><th>Région</th><th>Niveau</th><th>Statut</th><th /></tr></thead>
+            <thead><tr><th>Code</th><th>Nom</th><th>Région</th><th>Niveau</th><th>Spécialités</th><th>Statut</th><th /></tr></thead>
             <tbody>
               {list.data?.map((f) => (
                 <tr key={f.id}>
                   <td>{f.code}</td><td>{f.name}</td><td>{f.region}{f.district ? ` — ${f.district}` : ""}</td><td>{f.level ?? "—"}</td>
+                  <td>{f.services?.length ? f.services.length : <span className="muted">—</span>}{f.latitude === null ? <span className="badge badge-warn" style={{ marginLeft: 6 }}>sans GPS</span> : null}</td>
                   <td>{f.is_active ? <span className="badge badge-ok">Actif</span> : <span className="badge">Inactif</span>}</td>
-                  <td><button className="btn btn-sm" onClick={() => setEditing({ ...f })}>Modifier</button></td>
+                  <td><button className="btn btn-sm" onClick={() => setEditing({ ...f, services: f.services ?? [] })}>Modifier</button></td>
                 </tr>
               ))}
             </tbody>

@@ -12,12 +12,16 @@ def scope_patients(query: Select, user: User) -> Select:
     """Filtre une requête sur `Patient` aux dossiers accessibles par l'utilisateur.
 
     - agent de santé / médecin : patientes de leur établissement ;
-    - spécialiste : patientes de son établissement et patientes qui y sont référées.
+    - spécialiste : patientes de son établissement et patientes qui y sont référées (ou proposées).
     """
     if user.facility_id is None:
         return query.where(False)
     if user.role == Role.SPECIALISTE:
-        referred = select(Referral.patient_id).where(Referral.to_facility_id == user.facility_id)
+        referred = select(Referral.patient_id).where(or_(
+            Referral.to_facility_id == user.facility_id,
+            # orientation proposée vers cette structure, pas encore confirmée par un médecin
+            (Referral.to_facility_id.is_(None)) & (Referral.proposed_facility_id == user.facility_id),
+        ))
         return query.where(or_(Patient.facility_id == user.facility_id, Patient.id.in_(referred)))
     if user.role in (Role.AGENT, Role.MEDECIN):
         return query.where(Patient.facility_id == user.facility_id)

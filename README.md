@@ -123,6 +123,21 @@ l'établissement (et aux patientes référées pour le spécialiste) ; l'adminis
 médicaux ; statistiques masquées sous 5 effectifs ; journal des connexions, consultations, modifications,
 exécutions IA et changements de droits.
 
+## Orientation vers la structure spécialisée la plus proche
+
+Quand le risque est **moyen ou élevé**, l'analyse propose automatiquement les 3 structures les plus proches
+qui offrent une consultation spécialisée pour la pathologie (sein : sénologie, gynécologie ou oncologie ;
+col : gynécologie, colposcopie ou oncologie). La distance est calculée à vol d'oiseau depuis l'établissement
+où la patiente a été dépistée. À distance égale, la structure qui peut faire le bilan sur place (mammographie,
+échographie, biopsie) passe devant. Sans coordonnées GPS, les structures de la même région passent en premier.
+
+- Le mobile et le site affichent la liste avec distance, services, boutons **Appeler** et **Itinéraire**.
+- La liste proposée est enregistrée avec l'orientation (`suggested_facilities`), pour garder la trace de ce qui a été montré.
+- Le médecin valide toujours : la structure la plus proche est présélectionnée, il peut en choisir une autre.
+- Le spécialiste de la structure proposée voit la patiente dans ses orientations « entrantes » dès la proposition.
+- **Annuaire** : Administration → Établissements (coordonnées GPS, téléphone, adresse, services). Les établissements
+  de démonstration (`app/seed.py`) sont fictifs ; il faut les remplacer par la liste officielle et des services vérifiés.
+
 ## Sécurité de la connexion
 
 - **Blocage du compte** après 5 échecs consécutifs, pendant 15 minutes (`LOGIN_MAX_FAILURES`, `LOGIN_LOCK_MINUTES`).

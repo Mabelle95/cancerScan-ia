@@ -107,6 +107,7 @@ export function ScreeningResult() {
                 <span className="badge">{REFERRAL_LABELS[ref.status]}</span>
               </div>
               <p>{ref.proposed_recommendation}</p>
+              {ref.suggested_facilities?.length > 0 && <NearestPlaces referral={ref} />}
               {ref.final_decision ? (
                 <div className="notice notice-ok" style={{ marginTop: 12 }}>
                   <strong>Décision du professionnel ({formatDate(ref.decided_at)})</strong>
@@ -138,7 +139,8 @@ export function ScreeningResult() {
 
 function DecisionForm({ referral, facilities, onDone }: { referral: Referral; facilities: Facility[]; onDone: () => void }) {
   const [decision, setDecision] = useState(referral.proposed_recommendation);
-  const [facility, setFacility] = useState("");
+  // La structure spécialisée la plus proche est présélectionnée ; le médecin peut en choisir une autre
+  const [facility, setFacility] = useState(referral.proposed_facility_id ? String(referral.proposed_facility_id) : "");
   const [date, setDate] = useState("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -169,8 +171,9 @@ function DecisionForm({ referral, facilities, onDone }: { referral: Referral; fa
       <label className="field"><span className="field-label">Structure de référence</span>
         <select value={facility} onChange={(e) => setFacility(e.target.value)}>
           <option value="">— Pas de référence —</option>
-          {facilities.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.region})</option>)}
-        </select></label>
+          {facilities.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.region}){f.id === referral.proposed_facility_id ? " — la plus proche" : ""}</option>)}
+        </select>
+        {referral.proposed_facility_id && <span className="field-help">Présélection : la structure spécialisée la plus proche de la patiente.</span>}</label>
       <div className="grid grid-2">
         <label className="field"><span className="field-label">Date de rendez-vous</span>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
@@ -179,6 +182,47 @@ function DecisionForm({ referral, facilities, onDone }: { referral: Referral; fa
       </div>
       <button className="btn btn-primary" disabled={busy}>Valider l'orientation</button>
     </form>
+  );
+}
+
+export const SERVICE_LABELS: Record<string, string> = {
+  senologie: "Sénologie", gynecologie: "Gynécologie", oncologie: "Oncologie", chirurgie: "Chirurgie",
+  mammographie: "Mammographie", echographie: "Échographie", colposcopie: "Colposcopie", anatomopathologie: "Biopsie / anapath",
+};
+
+/** Structures spécialisées les plus proches de la patiente (distance à vol d'oiseau depuis son centre). */
+function NearestPlaces({ referral }: { referral: Referral }) {
+  const urgent = referral.proposed_level === "eleve";
+  return (
+    <div className="places">
+      <h3><Icon name="route" size={18} />{urgent ? "Orienter la patiente au plus vite" : "Où orienter la patiente"}</h3>
+      {referral.suggested_facilities.map((p, i) => {
+        const chosen = referral.to_facility_id === p.facility_id;
+        const first = referral.to_facility_id ? chosen : i === 0;
+        const km = p.same_facility ? "Dans le centre" : p.distance_km === null ? "Distance inconnue"
+          : p.distance_km < 1 ? "< 1 km" : `${p.distance_km < 10 ? p.distance_km.toFixed(1) : Math.round(p.distance_km)} km`;
+        return (
+          <div key={p.facility_id} className={`place${first ? " place-first" : ""}${urgent ? " place-urgent" : ""}`}>
+            <div className="place-head">
+              <div>
+                {first && <div className="place-tag">{chosen ? "Retenue par le médecin" : "La plus proche"}</div>}
+                <strong>{p.name}</strong>
+                <div className="muted">{[p.district, p.region].filter(Boolean).join(", ")}{p.address ? ` · ${p.address}` : ""}</div>
+              </div>
+              <span className="place-km"><Icon name="route" size={14} />{km}</span>
+            </div>
+            {p.services.length > 0 && <div className="chips" style={{ marginTop: 8 }}>{p.services.map((s) => <span key={s} className="badge">{SERVICE_LABELS[s] ?? s}</span>)}</div>}
+            <div className="row" style={{ marginTop: 10 }}>
+              {p.phone && <a className="btn btn-sm btn-primary" href={`tel:${p.phone.replace(/\s/g, "")}`}><Icon name="phone" size={15} />{p.phone}</a>}
+              {p.latitude !== null && p.longitude !== null && (
+                <a className="btn btn-sm" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}`}>Itinéraire</a>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      <p className="field-help">Distances à vol d'oiseau depuis le centre de dépistage : le trajet par la route est plus long.</p>
+    </div>
   );
 }
 

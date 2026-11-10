@@ -12,3 +12,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Fichiers temporaires du compilateur Kotlin (Android)
+.kotlin/

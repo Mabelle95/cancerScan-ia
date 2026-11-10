@@ -74,6 +74,12 @@ class Facility(Base):
     district: Mapped[str | None] = mapped_column(String(100))
     level: Mapped[str | None] = mapped_column(String(50))  # USP, CMS, CHP, CHR, CHU…
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Annuaire d'orientation : où se trouve l'établissement et quels services spécialisés il propose
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
+    address: Mapped[str | None] = mapped_column(String(255))
+    phone: Mapped[str | None] = mapped_column(String(50))
+    services: Mapped[list] = mapped_column(JsonType, default=list)  # clés de app.services.directory.SERVICES
 
 
 class User(Base):
@@ -183,6 +189,10 @@ class Referral(Base):
     decided_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     to_facility_id: Mapped[int | None] = mapped_column(ForeignKey("facilities.id"), index=True)
+    # Structure spécialisée la plus proche proposée automatiquement (risque moyen ou élevé), et la liste
+    # des structures proposées telle qu'elle a été montrée (traçabilité : l'annuaire peut changer ensuite)
+    proposed_facility_id: Mapped[int | None] = mapped_column(ForeignKey("facilities.id"), index=True)
+    suggested_facilities: Mapped[list] = mapped_column(JsonType, default=list)
     reason: Mapped[str | None] = mapped_column(Text)
     appointment_date: Mapped[date | None] = mapped_column(Date)
     status: Mapped[ReferralStatus] = mapped_column(enum_column(ReferralStatus), default=ReferralStatus.PROPOSED)
@@ -190,7 +200,8 @@ class Referral(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     screening: Mapped[Screening] = relationship(back_populates="referral")
-    to_facility: Mapped[Facility | None] = relationship()
+    to_facility: Mapped[Facility | None] = relationship(foreign_keys=[to_facility_id])
+    proposed_facility: Mapped[Facility | None] = relationship(foreign_keys=[proposed_facility_id])
 
 
 class ExamResult(Base):
