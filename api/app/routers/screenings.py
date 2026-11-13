@@ -76,6 +76,8 @@ def save_agent_notes(screening_id: uuid.UUID, body: dict[str, Any], db: DbSessio
     screening = _get_screening(db, user, screening_id)
     if not screening.assessments:
         raise HTTPException(status.HTTP_409_CONFLICT, "Le résultat de l'analyse IA doit être disponible avant votre appréciation")
+    if screening.status == ScreeningStatus.VALIDATED:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Orientation déjà validée par un professionnel : l'appréciation ne peut plus être modifiée")
     cleaned, errors = check_after_result(screening.pathology, body)
     if errors:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "; ".join(f"{k} : {v}" for k, v in errors.items()))

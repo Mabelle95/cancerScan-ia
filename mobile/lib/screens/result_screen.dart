@@ -245,10 +245,12 @@ class _ResultScreenState extends State<ResultScreen> {
               level: res['proposed_level'] as String?,
               places: [for (final f in res['suggested_facilities'] as List) Map<String, dynamic>.from(f as Map)],
               chosenId: res['to_facility_id'] as int?,
+              decided: res['final_decision'] != null,
             ),
 
           // --- Appréciation de l'agent : seulement APRÈS le résultat de l'IA ---------------
-          if (analysed && r.serverId != null && app.forms[r.pathology] != null) ...[
+          // Plus modifiable une fois l'orientation validée par un professionnel
+          if (analysed && r.serverId != null && app.forms[r.pathology] != null && res['status'] != 'valide' && res['final_decision'] == null) ...[
             for (final section in app.forms[r.pathology]!.sections.where((s) => s.fields.any((f) => f.afterResult)))
               InfoCard(
                 icon: Icons.psychology_alt_rounded,

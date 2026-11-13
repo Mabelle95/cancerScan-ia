@@ -130,7 +130,7 @@ export function ScreeningResult() {
       </div>
 
       {/* Appréciation de l'agent : seulement APRÈS le résultat de l'IA (comme sur le mobile) */}
-      {a && form && can("screenings:write") && <AgentNotes screening={s} form={form} onSaved={screening.reload} />}
+      {a && form && can("screenings:write") && s.status !== "valide" && <AgentNotes screening={s} form={form} onSaved={screening.reload} />}
 
       {form && <DataRecap screening={s} form={form} />}
     </>
@@ -185,18 +185,18 @@ function DecisionForm({ referral, facilities, onDone }: { referral: Referral; fa
   );
 }
 
-export const SERVICE_LABELS: Record<string, string> = {
-  senologie: "Sénologie", gynecologie: "Gynécologie", oncologie: "Oncologie", chirurgie: "Chirurgie",
-  mammographie: "Mammographie", echographie: "Échographie", colposcopie: "Colposcopie", anatomopathologie: "Biopsie / anapath",
-};
-
 /** Structures spécialisées les plus proches de la patiente (distance à vol d'oiseau depuis son centre). */
 function NearestPlaces({ referral }: { referral: Referral }) {
-  const urgent = referral.proposed_level === "eleve";
+  // Après la décision du médecin, seule la structure qu'il a retenue reste affichée (aucune si pas de référence)
+  const places = referral.final_decision
+    ? referral.suggested_facilities.filter((p) => p.facility_id === referral.to_facility_id)
+    : referral.suggested_facilities;
+  if (places.length === 0) return null;
+  const urgent = referral.proposed_level === "eleve" && !referral.final_decision;
   return (
     <div className="places">
-      <h3><Icon name="route" size={18} />{urgent ? "Orienter la patiente au plus vite" : "Où orienter la patiente"}</h3>
-      {referral.suggested_facilities.map((p, i) => {
+      <h3><Icon name="route" size={18} />{referral.final_decision ? "Structure de référence" : urgent ? "Orienter la patiente au plus vite" : "Où orienter la patiente"}</h3>
+      {places.map((p, i) => {
         const chosen = referral.to_facility_id === p.facility_id;
         const first = referral.to_facility_id ? chosen : i === 0;
         const km = p.same_facility ? "Dans le centre" : p.distance_km === null ? "Distance inconnue"
@@ -211,7 +211,7 @@ function NearestPlaces({ referral }: { referral: Referral }) {
               </div>
               <span className="place-km"><Icon name="route" size={14} />{km}</span>
             </div>
-            {p.services.length > 0 && <div className="chips" style={{ marginTop: 8 }}>{p.services.map((s) => <span key={s} className="badge">{SERVICE_LABELS[s] ?? s}</span>)}</div>}
+            {p.services.length > 0 && <div className="chips" style={{ marginTop: 8 }}>{(p.service_labels ?? p.services).map((s) => <span key={s} className="badge">{s}</span>)}</div>}
             <div className="row" style={{ marginTop: 10 }}>
               {p.phone && <a className="btn btn-sm btn-primary" href={`tel:${p.phone.replace(/\s/g, "")}`}><Icon name="phone" size={15} />{p.phone}</a>}
               {p.latitude !== null && p.longitude !== null && (

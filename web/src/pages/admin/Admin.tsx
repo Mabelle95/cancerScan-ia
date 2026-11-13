@@ -110,20 +110,42 @@ function UserForm({ facilities, onDone }: { facilities: Facility[]; onDone: () =
 
 // --- Établissements ----------------------------------------------------------------
 
-const EMPTY_FACILITY: Omit<Facility, "id"> = {
+// Les coordonnées restent du texte pendant la saisie (sinon « 6. » ou « - » seraient effacés à la frappe)
+type FacilityDraft = Omit<Facility, "id" | "latitude" | "longitude"> & { id?: number; latitude: string; longitude: string };
+
+const EMPTY_FACILITY: FacilityDraft = {
   code: "", name: "", region: "Maritime", district: "", level: "", is_active: true,
-  latitude: null, longitude: null, address: "", phone: "", services: [],
+  latitude: "", longitude: "", address: "", phone: "", services: [],
 };
+
+/** Texte saisi → nombre ; null si vide ; undefined si invalide ou hors bornes. */
+export function parseCoord(text: string, max: number): number | null | undefined {
+  const t = text.trim().replace(",", ".");
+  if (t === "") return null;
+  if (!/^-?\d+(\.\d+)?$/.test(t)) return undefined;
+  const n = Number(t);
+  return Math.abs(n) <= max ? n : undefined;
+}
 
 export function Facilities() {
   const list = useAsync(() => api.facilities(false), []);
-  const [editing, setEditing] = useState<(Omit<Facility, "id"> & { id?: number }) | null>(null);
+  const [editing, setEditing] = useState<FacilityDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
     if (!editing) return;
-    const { id, ...body } = editing;
+    const { id, latitude: latText, longitude: lonText, ...rest } = editing;
+    const latitude = parseCoord(latText, 90), longitude = parseCoord(lonText, 180);
+    if (latitude === undefined || longitude === undefined) {
+      setError("Coordonnées GPS invalides : utilisez des degrés décimaux, par exemple 6.1319 et 1.2228.");
+      return;
+    }
+    if ((latitude === null) !== (longitude === null)) {
+      setError("Renseignez la latitude et la longitude, ou aucune des deux.");
+      return;
+    }
+    const body = { ...rest, latitude, longitude };
     try {
       if (id) await api.updateFacility(id, body); else await api.createFacility(body);
       setEditing(null);
@@ -134,7 +156,6 @@ export function Facilities() {
   };
   const set = (k: string, v: string | boolean | number | null | string[]) => setEditing(editing && { ...editing, [k]: v });
   const services = useAsync(() => api.facilityServices(), []);
-  const coord = (v: string) => (v.trim() === "" ? null : Number(v.replace(",", ".")));
   const toggleService = (s: string) =>
     editing && set("services", editing.services.includes(s) ? editing.services.filter((x) => x !== s) : [...editing.services, s]);
 
@@ -160,8 +181,8 @@ export function Facilities() {
               </select></label>
             <label className="field"><span className="field-label">Téléphone</span><input type="tel" value={editing.phone ?? ""} onChange={(e) => set("phone", e.target.value)} /></label>
             <label className="field"><span className="field-label">Adresse</span><input type="text" value={editing.address ?? ""} onChange={(e) => set("address", e.target.value)} /></label>
-            <label className="field"><span className="field-label">Latitude</span><input type="text" inputMode="decimal" placeholder="ex. 6.1319" value={editing.latitude ?? ""} onChange={(e) => set("latitude", coord(e.target.value))} /></label>
-            <label className="field"><span className="field-label">Longitude</span><input type="text" inputMode="decimal" placeholder="ex. 1.2228" value={editing.longitude ?? ""} onChange={(e) => set("longitude", coord(e.target.value))} />
+            <label className="field"><span className="field-label">Latitude</span><input type="text" inputMode="decimal" placeholder="ex. 6.1319" value={editing.latitude} onChange={(e) => set("latitude", e.target.value)} /></label>
+            <label className="field"><span className="field-label">Longitude</span><input type="text" inputMode="decimal" placeholder="ex. 1.2228" value={editing.longitude} onChange={(e) => set("longitude", e.target.value)} />
               <span className="field-help">Position GPS : sert à proposer la structure spécialisée la plus proche des patientes.</span></label>
             <label className="field checks"><span className="row"><input type="checkbox" checked={editing.is_active} onChange={(e) => set("is_active", e.target.checked)} /> Actif</span></label>
           </div>
@@ -187,7 +208,7 @@ export function Facilities() {
                   <td>{f.code}</td><td>{f.name}</td><td>{f.region}{f.district ? ` — ${f.district}` : ""}</td><td>{f.level ?? "—"}</td>
                   <td>{f.services?.length ? f.services.length : <span className="muted">—</span>}{f.latitude === null ? <span className="badge badge-warn" style={{ marginLeft: 6 }}>sans GPS</span> : null}</td>
                   <td>{f.is_active ? <span className="badge badge-ok">Actif</span> : <span className="badge">Inactif</span>}</td>
-                  <td><button className="btn btn-sm" onClick={() => setEditing({ ...f, services: f.services ?? [] })}>Modifier</button></td>
+                  <td><button className="btn btn-sm" onClick={() => setEditing({ ...f, services: f.services ?? [], latitude: f.latitude?.toString() ?? "", longitude: f.longitude?.toString() ?? "" })}>Modifier</button></td>
                 </tr>
               ))}
             </tbody>

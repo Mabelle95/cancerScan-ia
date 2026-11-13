@@ -3,13 +3,13 @@
 from datetime import date, timedelta
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
-from sqlalchemy import case, or_, select
+from sqlalchemy import case, select
 
 from app.core.permissions import Perm
 from app.deps import DbSession, require
 from app.models import Facility, Patient, Referral, ReferralStatus, RiskLevel, Screening, ScreeningStatus, utcnow
 from app.schemas import ReferralDecision, ReferralListItem, ReferralOut, ReferralStatusUpdate
-from app.services.access import scope_patients
+from app.services.access import can_act_on_referral, incoming_to, scope_patients
 from app.services.audit import audit
 
 router = APIRouter(prefix="/referrals", tags=["Orientations et suivi"])
@@ -27,6 +27,9 @@ def _get(db, user, referral_id: int) -> Referral:
     referral = db.scalar(select(Referral).where(Referral.id == referral_id, Referral.patient_id.in_(accessible)))
     if referral is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Orientation introuvable ou non accessible")
+    if not can_act_on_referral(user, referral, db.get(Patient, referral.patient_id)):
+        raise HTTPException(status.HTTP_403_FORBIDDEN,
+                            "Structure seulement proposée : la décision revient à l'établissement qui suit la patiente")
     return referral
 
 
@@ -57,10 +60,7 @@ def list_referrals(
     if status_:
         q = q.where(Referral.status == status_)
     if direction == "incoming":
-        q = q.where(or_(
-            Referral.to_facility_id == user.facility_id,
-            (Referral.to_facility_id.is_(None)) & (Referral.proposed_facility_id == user.facility_id),
-        ))
+        q = q.where(incoming_to(user.facility_id))
     elif direction == "outgoing":
         q = q.where(Patient.facility_id == user.facility_id)
     if pending_decision:

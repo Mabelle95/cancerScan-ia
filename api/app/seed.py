@@ -55,10 +55,12 @@ def seed(demo: bool = False) -> None:
             if existing is None:
                 facilities[data["code"]] = Facility(**data)
                 db.add(facilities[data["code"]])
-            else:
-                # Complète l'annuaire d'une base créée avant l'ajout des coordonnées (sans écraser une saisie)
+            elif existing.latitude is None and existing.longitude is None and not existing.services:
+                # Annuaire jamais renseigné (base créée avant l'ajout des coordonnées) : on le complète une fois.
+                # Dès qu'un administrateur a saisi quelque chose, on n'y touche plus : un service retiré
+                # (ex. mammographe en panne) ne doit pas revenir au redémarrage du serveur.
                 for key in ("latitude", "longitude", "address", "phone", "services"):
-                    if data.get(key) and not getattr(existing, key):
+                    if data.get(key) is not None and getattr(existing, key) in (None, ""):
                         setattr(existing, key, data[key])
         db.flush()
 

@@ -22,6 +22,8 @@ class FakeServer {
   final List<Map<String, dynamic>> errorReports = [];
   bool offline = false;
   String? rejectPatientPhone;
+  String? decision; // décision du médecin, renvoyée avec le dépistage
+  int screeningReads = 0;
   int _seq = 0;
 
   String _id() => '00000000-0000-0000-0000-${(++_seq).toString().padLeft(12, '0')}';
@@ -54,14 +56,15 @@ class FakeServer {
       return json({'patients': patients, 'screenings': screenings});
     }
     if (req.url.path.contains('/screenings/')) {
+      screeningReads++;
       return json({
         'id': req.url.pathSegments.last,
         'patient_id': 'srv-patient',
-        'status': 'analyse',
+        'status': decision == null ? 'analyse' : 'valide',
         'assessments': [
           {'risk_level': 'eleve', 'score': 0.81, 'model_validated': false, 'model_id': 'sein-test', 'model_version': '1', 'explanations': []}
         ],
-        'referral': {'proposed_level': 'eleve', 'proposed_recommendation': 'Référence prioritaire', 'final_decision': null, 'status': 'proposee'},
+        'referral': {'proposed_level': 'eleve', 'proposed_recommendation': 'Référence prioritaire', 'final_decision': decision, 'status': 'proposee', 'to_facility_id': decision == null ? null : 7, 'suggested_facilities': [{'facility_id': 7, 'name': 'CHU', 'distance_km': 4.6, 'services': ['senologie'], 'service_labels': ['Sénologie']}]},
       });
     }
     if (req.url.path.endsWith('/client-errors')) {
@@ -197,5 +200,23 @@ void main() {
     final results = await Future.wait([app.sync.run(), app.sync.run(), app.syncNow()]);
     expect(server.batches.length, 1);
     expect(results.whereType<Object>().length, 3); // les trois appels reçoivent le même rapport
+  });
+
+  test("la décision du médecin est récupérée, puis le dépistage n'est plus relu", () async {
+    final s = await app.createScreening(form: sein, data: data, serverPatientId: 'srv-patient', patientLabel: 'Ama');
+    await app.idle;
+    var r = (await store.get(s.clientId))!.result!;
+    expect(r['final_decision'], isNull);
+    expect((r['suggested_facilities'] as List).single['service_labels'], ['Sénologie']);
+
+    server.decision = 'Référence au CHU';
+    await app.syncNow();
+    r = (await store.get(s.clientId))!.result!;
+    expect(r['final_decision'], 'Référence au CHU');
+    expect(r['to_facility_id'], 7);
+
+    final reads = server.screeningReads;
+    await app.syncNow();
+    expect(server.screeningReads, reads); // décision connue : plus d'appel inutile
   });
 }

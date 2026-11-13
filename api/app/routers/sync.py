@@ -39,21 +39,28 @@ def sync(body: SyncIn, db: DbSession, user=require(Perm.SCREENINGS_WRITE)):
     screenings_out: list[SyncItemResult] = []
 
     for item in body.patients:
+        # Résultats des dépistages de cette patiente : publiés seulement si tout son bloc est enregistré.
+        # Si un dépistage échoue, le point de sauvegarde annule aussi les autres : annoncer « créé » pour eux
+        # ferait effacer du téléphone des saisies qui n'existent pas sur le serveur.
+        nested: list[SyncItemResult] = []
         try:
             with db.begin_nested():
                 patient = db.scalar(select(Patient).where(Patient.client_uuid == item.client_uuid))
                 if patient:
-                    patients_out.append(SyncItemResult(client_uuid=item.client_uuid, server_id=patient.id, status="already_synced"))
+                    result = SyncItemResult(client_uuid=item.client_uuid, server_id=patient.id, status="already_synced")
                 else:
                     patient = create_patient(db, user, item)
-                    patients_out.append(SyncItemResult(client_uuid=item.client_uuid, server_id=patient.id, status="created"))
+                    result = SyncItemResult(client_uuid=item.client_uuid, server_id=patient.id, status="created")
                 for s in item.screenings:
-                    screenings_out.append(_sync_screening(db, user, patient, s))
+                    nested.append(_sync_screening(db, user, patient, s))
+            patients_out.append(result)
+            screenings_out.extend(nested)
         except IntegrityError:
             patients_out.append(_already(db, Patient, item.client_uuid)
                                 or SyncItemResult(client_uuid=item.client_uuid, status="error", detail="Conflit d'enregistrement"))
         except (HTTPException, ValueError, ValidationError) as exc:
             patients_out.append(SyncItemResult(client_uuid=item.client_uuid, status="error", detail=_detail(exc)))
+        db.commit()  # libère le verrou d'écriture entre deux éléments (une analyse IA peut prendre du temps)
 
     for item in body.screenings:
         try:
@@ -65,8 +72,8 @@ def sync(body: SyncIn, db: DbSession, user=require(Perm.SCREENINGS_WRITE)):
                                   or SyncItemResult(client_uuid=item.client_uuid, status="error", detail="Conflit d'enregistrement"))
         except (HTTPException, ValueError, ValidationError) as exc:
             screenings_out.append(SyncItemResult(client_uuid=item.client_uuid, status="error", detail=_detail(exc)))
+        db.commit()
 
-    db.commit()
     return SyncOut(patients=patients_out, screenings=screenings_out)
 
 

@@ -26,6 +26,9 @@ if _sqlite:
         # Sans cela, deux transactions qui lisent puis veulent écrire s'interbloquent : SQLite refuse
         # immédiatement la seconde (erreur 500 vue lors de synchronisations simultanées du mobile).
         # BEGIN IMMEDIATE réserve l'écriture dès le début : la seconde attend son tour.
+        # Appliqué aussi aux lectures : presque toutes écrivent dans le journal d'audit (consultation d'un dossier).
+        # Pour que l'attente reste courte, les traitements longs valident souvent (POST /sync : après chaque élément).
+        # PostgreSQL, utilisé en production, n'a pas ce verrou global.
         conn.exec_driver_sql("BEGIN IMMEDIATE")
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 

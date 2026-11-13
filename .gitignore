@@ -42,3 +42,7 @@ logs/
 
 # Modèles entraînés : régénérés par « python -m cancerscan_ml.train » (voir README)
 ml/models/
+
+# Documents de travail (Word) : jamais versionnés
+*.docx
+~$*

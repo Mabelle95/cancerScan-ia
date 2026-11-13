@@ -15,15 +15,16 @@ from sqlalchemy.orm import Session
 
 from app.models import Facility, Pathology, RiskLevel
 
+# Libellés courts : affichés tels quels sur le web et le mobile (seule source, pas de copie côté clients)
 SERVICES: dict[str, str] = {
-    "senologie": "Consultation de sénologie (spécialiste du sein)",
-    "gynecologie": "Consultation de gynécologie",
+    "senologie": "Sénologie",
+    "gynecologie": "Gynécologie",
     "oncologie": "Oncologie",
     "chirurgie": "Chirurgie",
     "mammographie": "Mammographie",
     "echographie": "Échographie",
     "colposcopie": "Colposcopie",
-    "anatomopathologie": "Anatomopathologie (analyse des biopsies)",
+    "anatomopathologie": "Biopsie / anapath",
 }
 
 # Une structure est proposée si elle offre au moins une de ces consultations spécialisées
@@ -101,6 +102,7 @@ def nearest_specialists(db: Session, pathology: Pathology, origin: Facility | No
             "longitude": f.longitude,
             "distance_km": round(d, 1) if d is not None else None,
             "services": [s for s in SERVICES if s in (f.services or [])],
+            "service_labels": [label for s, label in SERVICES.items() if s in (f.services or [])],
             "same_facility": origin is not None and f.id == origin.id,
         })
     return out

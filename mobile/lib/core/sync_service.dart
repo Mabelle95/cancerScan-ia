@@ -109,13 +109,13 @@ class SyncService {
   }
 
   /// Récupère le résultat d'analyse des dépistages synchronisés dont l'analyse n'est pas encore connue
-  /// (ou était en attente côté serveur).
+  /// (ou était en attente côté serveur), et la décision du médecin pour les orientations qui l'attendent
+  /// (risque moyen ou élevé) : l'agent doit savoir vers quelle structure la patiente a finalement été référée.
   Future<int> fetchResults() async {
     var count = 0;
     for (final s in await store.screenings()) {
       if (s.state != SyncState.synced || s.serverId == null) continue;
-      final known = s.result?['status'];
-      if (known != null && known != 'soumis') continue; // seul « soumis » (analyse IA différée) peut encore évoluer
+      if (!needsRefresh(s.result)) continue;
       final remote = await api.screening(s.serverId!);
       s.result = summarize(remote);
       s.serverPatientId ??= remote['patient_id'] as String?;
@@ -123,6 +123,13 @@ class SyncService {
       count++;
     }
     return count;
+  }
+
+  static bool needsRefresh(Map<String, dynamic>? result) {
+    final status = result?['status'];
+    if (status == null || status == 'soumis') return true; // analyse IA pas encore connue
+    final awaitingDecision = result!['final_decision'] == null && const ['moyen', 'eleve'].contains(result['proposed_level']);
+    return status != 'valide' && awaitingDecision;
   }
 
   /// Résumé conservé sur l'appareil (le dossier complet reste sur le serveur).

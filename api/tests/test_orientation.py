@@ -77,3 +77,78 @@ def test_facility_services_are_validated(client, login):
     r = client.post(f"{API}/facilities", json=body, headers=admin)
     assert r.status_code == 201 and r.json()["services"] == ["gynecologie"]
     assert "senologie" in client.get(f"{API}/facilities/services", headers=admin).json()
+
+
+# --- Corrections issues de la relecture du code ----------------------------------------
+
+def _decide(client, headers, ref_id, **body):
+    return client.post(f"{API}/referrals/{ref_id}/decision", json={"final_decision": "Décision du médecin"} | body, headers=headers)
+
+
+def test_decision_without_referral_removes_access_of_suggested_facility(client, login, engine_ok):
+    agent, medecin, spec = login("agent@cancerscan.tg"), login("medecin@cancerscan.tg"), login("specialiste@cancerscan.tg")
+    pid = _new_patient(client, agent)["patient"]["id"]
+    ref = _screen(client, agent, pid, engine_ok, "eleve")["referral"]
+    assert client.get(f"{API}/patients/{pid}", headers=spec).status_code == 200  # proposée : peut se préparer
+    assert _decide(client, medecin, ref["id"], final_decision="Surveillance au centre").status_code == 200
+    # Plus de référence : la structure seulement suggérée perd l'accès et l'orientation n'est plus « entrante »
+    assert client.get(f"{API}/patients/{pid}", headers=spec).status_code == 404
+    assert client.get(f"{API}/referrals", params={"direction": "incoming"}, headers=spec).json() == []
+
+
+def test_suggested_facility_cannot_decide_for_the_referring_doctor(client, login, engine_ok):
+    agent, medecin, spec = login("agent@cancerscan.tg"), login("medecin@cancerscan.tg"), login("specialiste@cancerscan.tg")
+    pid = _new_patient(client, agent)["patient"]["id"]
+    ref = _screen(client, agent, pid, engine_ok, "eleve")["referral"]
+    assert _decide(client, spec, ref["id"]).status_code == 403
+    assert client.patch(f"{API}/referrals/{ref['id']}/status", json={"status": "annulee"}, headers=spec).status_code == 403
+    # Une fois retenue par le médecin, la structure fait avancer le suivi
+    r = _decide(client, medecin, ref["id"], to_facility_id=ref["proposed_facility_id"], appointment_date="2026-12-01")
+    assert r.status_code == 200
+    assert client.patch(f"{API}/referrals/{ref['id']}/status", json={"status": "realisee"}, headers=spec).status_code == 200
+
+
+def test_agent_notes_locked_after_validation(client, login, engine_ok):
+    agent, medecin = login("agent@cancerscan.tg"), login("medecin@cancerscan.tg")
+    pid = _new_patient(client, agent)["patient"]["id"]
+    s = _screen(client, agent, pid, engine_ok, "eleve")
+    notes = {"probabilite_enqueteur": "elevee"}
+    assert client.patch(f"{API}/screenings/{s['id']}/agent-notes", json=notes, headers=agent).status_code == 200
+    _decide(client, medecin, s["referral"]["id"])
+    r = client.patch(f"{API}/screenings/{s['id']}/agent-notes", json={"probabilite_enqueteur": "faible"}, headers=agent)
+    assert r.status_code == 409
+
+
+def test_seed_does_not_restore_services_removed_by_admin():
+    from app.seed import seed
+    with SessionLocal() as db:
+        chu = db.scalar(select(Facility).where(Facility.code == "LOM-CHU"))
+        chu.services = []  # mammographe en panne : l'administrateur retire tout
+        db.commit()
+    seed(demo=True)
+    with SessionLocal() as db:
+        assert db.scalar(select(Facility).where(Facility.code == "LOM-CHU")).services == []
+
+
+def test_sync_does_not_report_rolled_back_screenings_as_created(client, login, engine_ok, monkeypatch):
+    import uuid
+    from app.routers import sync as sync_router
+    real, calls = sync_router.create_screening, []
+
+    def flaky(db, user, patient, item):
+        calls.append(item)
+        if len(calls) == 2:
+            raise ValueError("Données invalides")
+        return real(db, user, patient, item)
+
+    monkeypatch.setattr(sync_router, "create_screening", flaky)
+    h = login("agent@cancerscan.tg")
+    s1, s2 = str(uuid.uuid4()), str(uuid.uuid4())
+    batch = {"patients": [{"region": "Maritime", "consent_given": True, "client_uuid": str(uuid.uuid4()), "screenings": [
+        {"client_uuid": s1, "pathology": "sein", "data": SEIN_COMPLET, "submit": True},
+        {"client_uuid": s2, "pathology": "sein", "data": SEIN_COMPLET, "submit": True},
+    ]}]}
+    out = client.post(f"{API}/sync", json=batch, headers=h).json()
+    assert out["patients"][0]["status"] == "error"
+    # Le premier dépistage a été annulé avec la patiente : il ne doit pas être annoncé « créé »
+    assert out["screenings"] == []

@@ -4,22 +4,13 @@ import 'package:url_launcher/url_launcher.dart';
 import '../theme.dart';
 import 'ui.dart';
 
-const serviceLabels = {
-  'senologie': 'Sénologie',
-  'gynecologie': 'Gynécologie',
-  'oncologie': 'Oncologie',
-  'chirurgie': 'Chirurgie',
-  'mammographie': 'Mammographie',
-  'echographie': 'Échographie',
-  'colposcopie': 'Colposcopie',
-  'anatomopathologie': 'Biopsie / anapath',
-};
-
 /// Structures spécialisées les plus proches de la patiente, proposées par le serveur pour un risque
 /// moyen ou élevé. La première est la plus proche ; l'agent peut appeler ou ouvrir l'itinéraire.
 class ReferralPlacesCard extends StatelessWidget {
-  const ReferralPlacesCard({super.key, required this.level, required this.places, this.chosenId});
+  const ReferralPlacesCard({super.key, required this.level, required this.places, this.chosenId, this.decided = false});
   final String? level;
+  /// Le médecin a pris sa décision : seule la structure retenue est affichée (aucune s'il ne réfère pas)
+  final bool decided;
   final List<Map<String, dynamic>> places;
   /// Structure retenue par le médecin (si la décision est déjà prise)
   final int? chosenId;
@@ -27,20 +18,22 @@ class ReferralPlacesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, _, _) = riskStyle(level);
-    final urgent = level == 'eleve';
+    final shown = decided ? places.where((p) => p['facility_id'] == chosenId).toList() : places;
+    if (shown.isEmpty) return const SizedBox.shrink();
+    final urgent = level == 'eleve' && !decided;
     return InfoCard(
       icon: Icons.near_me_rounded,
       iconColor: color,
-      title: urgent ? 'Orienter la patiente au plus vite' : 'Où orienter la patiente',
+      title: decided ? 'Structure de référence' : urgent ? 'Orienter la patiente au plus vite' : 'Où orienter la patiente',
       children: [
-        Text(
+        if (!decided) Text(
           urgent
               ? 'Structures spécialisées les plus proches. Aidez la patiente à prendre rendez-vous rapidement.'
               : 'Structures spécialisées les plus proches pour une consultation.',
           style: const TextStyle(color: Colors.black54, fontSize: 14),
         ),
         const SizedBox(height: 12),
-        for (final (i, p) in places.indexed) _Place(place: p, highlight: chosenId == null ? i == 0 : chosenId == p['facility_id'], color: color, chosen: chosenId == p['facility_id']),
+        for (final (i, p) in shown.indexed) _Place(place: p, highlight: chosenId == null ? i == 0 : chosenId == p['facility_id'], color: color, chosen: chosenId == p['facility_id']),
         const SizedBox(height: 4),
         const Text('Distances à vol d\'oiseau depuis votre centre : le trajet par la route est plus long.',
             style: TextStyle(fontSize: 12, color: Colors.black54)),
@@ -70,7 +63,8 @@ class _Place extends StatelessWidget {
     final phone = place['phone'] as String?;
     final lat = place['latitude'] as num?, lon = place['longitude'] as num?;
     final where = [place['district'], place['region']].whereType<String>().join(', ');
-    final services = [for (final s in place['services'] as List? ?? []) serviceLabels[s] ?? '$s'];
+    // Libellés envoyés par le serveur (clé brute pour un résultat enregistré avant leur ajout)
+    final services = [for (final s in (place['service_labels'] ?? place['services']) as List? ?? []) '$s'];
     final distance = place['same_facility'] == true
         ? 'Dans votre centre'
         : km == null

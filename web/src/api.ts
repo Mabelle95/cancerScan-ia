@@ -53,6 +53,7 @@ export interface SuggestedFacility {
   longitude: number | null;
   distance_km: number | null;
   services: string[];
+  service_labels?: string[];
   same_facility: boolean;
 }
 
